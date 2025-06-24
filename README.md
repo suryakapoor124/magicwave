@@ -1,6 +1,10 @@
 **Love the app? Fuel my caffeine addiction and keep the magic going—buy me a coffee!**
 https://coff.ee/suryanshkapoor
 
+
+###Give the FEEDBACK here 
+https://docs.google.com/forms/d/e/1FAIpQLSfNjBWki6XXiSkFDmzAYZwCUyO4wdinM2DZ76ZtNiTcaL5oEg/viewform?usp=header
+
 # MagicWave 🎵 - Frequency Therapy App
 
 **MagicWave** is a beautiful frequency therapy app that generates healing tones and meditation frequencies right on your phone. Experience the power of binaural beats, solfeggio frequencies, and sacred sound therapy with a modern, easy-to-use interface designed for relaxation and wellness.
