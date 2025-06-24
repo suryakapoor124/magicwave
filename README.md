@@ -2,7 +2,7 @@
 https://coff.ee/suryanshkapoor
 
 
-###Give the FEEDBACK here 
+GIVE THE FEEDBACK HERE
 https://docs.google.com/forms/d/e/1FAIpQLSfNjBWki6XXiSkFDmzAYZwCUyO4wdinM2DZ76ZtNiTcaL5oEg/viewform?usp=header
 
 # MagicWave 🎵 - Frequency Therapy App
