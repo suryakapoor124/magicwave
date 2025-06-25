@@ -8,8 +8,7 @@ class FrequencyAudioEngine {
     this.currentFrequency = null;
     this.volume = 0.5;
     this.timer = null;
-    this.backgroundSound = null;
-    this.isBackgroundEnabled = false;
+    this.audioCache = new Map(); // Cache for generated audio
     this.setupAudio();
   }
 
@@ -28,37 +27,31 @@ class FrequencyAudioEngine {
     }
   }
 
-  // Generate sine wave audio data
-  generateSineWave(frequency, duration = 10, sampleRate = 44100) {
-    const samples = duration * sampleRate;
-    const amplitude = 0.3; // Comfortable volume level
+  // Ultra-fast audio generation (minimal processing)
+  generateSineWave(frequency, duration = 0.5, sampleRate = 11025) {
+    const samples = Math.floor(duration * sampleRate);
+    const amplitude = 0.25; // Lower amplitude for faster processing
     const audioData = new Float32Array(samples);
     
+    const step = 2 * Math.PI * frequency / sampleRate;
     for (let i = 0; i < samples; i++) {
-      const t = i / sampleRate;
-      audioData[i] = amplitude * Math.sin(2 * Math.PI * frequency * t);
+      audioData[i] = amplitude * Math.sin(step * i);
     }
     
     return audioData;
   }
 
-  // Create WAV file from audio data
-  createWavFile(audioData, sampleRate = 44100) {
+  // Create minimal WAV file (ultra-fast)
+  createWavFile(audioData, sampleRate = 11025) {
     const length = audioData.length;
     const buffer = new ArrayBuffer(44 + length * 2);
     const view = new DataView(buffer);
     
-    // WAV header
-    const writeString = (offset, string) => {
-      for (let i = 0; i < string.length; i++) {
-        view.setUint8(offset + i, string.charCodeAt(i));
-      }
-    };
-    
-    writeString(0, 'RIFF');
+    // Minimal WAV header
+    view.setUint32(0, 0x46464952, true); // "RIFF"
     view.setUint32(4, 36 + length * 2, true);
-    writeString(8, 'WAVE');
-    writeString(12, 'fmt ');
+    view.setUint32(8, 0x45564157, true); // "WAVE"
+    view.setUint32(12, 0x20746d66, true); // "fmt "
     view.setUint32(16, 16, true);
     view.setUint16(20, 1, true);
     view.setUint16(22, 1, true);
@@ -66,59 +59,67 @@ class FrequencyAudioEngine {
     view.setUint32(28, sampleRate * 2, true);
     view.setUint16(32, 2, true);
     view.setUint16(34, 16, true);
-    writeString(36, 'data');
+    view.setUint32(36, 0x61746164, true); // "data"
     view.setUint32(40, length * 2, true);
     
-    // Convert float samples to 16-bit PCM
+    // Fast PCM conversion
     let offset = 44;
     for (let i = 0; i < length; i++) {
-      const sample = Math.max(-1, Math.min(1, audioData[i]));
-      view.setInt16(offset, sample * 0x7FFF, true);
+      view.setInt16(offset, audioData[i] * 32767, true);
       offset += 2;
     }
     
     return buffer;
   }
 
-  // Create data URI from WAV buffer
+  // Create data URI (ultra-fast base64)
   createAudioURI(wavBuffer) {
     const bytes = new Uint8Array(wavBuffer);
     let binary = '';
-    for (let i = 0; i < bytes.byteLength; i++) {
-      binary += String.fromCharCode(bytes[i]);
+    const chunkSize = 8192;
+    
+    for (let i = 0; i < bytes.length; i += chunkSize) {
+      const chunk = bytes.subarray(i, i + chunkSize);
+      binary += String.fromCharCode.apply(null, chunk);
     }
-    const base64 = btoa(binary);
-    return `data:audio/wav;base64,${base64}`;
+    
+    return `data:audio/wav;base64,${btoa(binary)}`;
   }
 
-  // Play frequency (with actual audio generation)
+  // Play frequency (with caching for instant response)
   async playFrequency(frequencyData, options = {}) {
     try {
-      console.log('AudioEngine: Starting playFrequency...');
-      
-      // Stop any currently playing sound and wait for it to stop
-      await this.stopFrequency();
-      
-      // Small delay to ensure previous sound is fully stopped
-      await new Promise(resolve => setTimeout(resolve, 100));
-
-      // Haptic feedback
-      await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-
-      // Extract frequency value
+      // Extract frequency value immediately
       const frequency = typeof frequencyData === 'object' ? frequencyData.frequency : frequencyData;
+      
+      // Fast stop without delay
+      if (this.sound) {
+        this.sound.stopAsync().catch(() => {}); // Non-blocking
+        this.sound.unloadAsync().catch(() => {}); // Non-blocking
+        this.sound = null;
+      }
+      
       this.currentFrequency = frequency;
+      this.isPlaying = false; // Will be set to true when sound starts
 
-      console.log('AudioEngine: Generating and playing frequency:', frequency, 'Hz');
+      let audioURI;
       
-      // Generate sine wave audio
-      const audioData = this.generateSineWave(frequency, 10); // 10 second loop
-      const wavBuffer = this.createWavFile(audioData);
-      const audioURI = this.createAudioURI(wavBuffer);
+      // Check cache first for instant response
+      if (this.audioCache.has(frequency)) {
+        audioURI = this.audioCache.get(frequency);
+      } else {
+        // Generate and cache audio data
+        const audioData = this.generateSineWave(frequency, 0.5);
+        const wavBuffer = this.createWavFile(audioData, 11025);
+        audioURI = this.createAudioURI(wavBuffer);
+        
+        // Cache for next time (limit cache size)
+        if (this.audioCache.size < 50) {
+          this.audioCache.set(frequency, audioURI);
+        }
+      }
       
-      console.log('AudioEngine: Audio data generated, creating sound...');
-      
-      // Create and play sound
+      // Create and play sound immediately
       const { sound } = await Audio.Sound.createAsync(
         { uri: audioURI },
         {
@@ -127,21 +128,17 @@ class FrequencyAudioEngine {
           volume: this.volume,
         }
       );
-
-      console.log('AudioEngine: Sound created and should be playing');
       
       this.sound = sound;
       this.isPlaying = true;
 
-      // Set up status update listener
+      // Simplified status listener
       sound.setOnPlaybackStatusUpdate((status) => {
         if (status.didJustFinish && !status.isLooping) {
           this.isPlaying = false;
           this.currentFrequency = null;
         }
       });
-
-      return Promise.resolve();
 
     } catch (error) {
       console.error('Error playing frequency:', error);
@@ -150,45 +147,29 @@ class FrequencyAudioEngine {
     }
   }
 
-  // Pause playback
+  // Pause playback (instant)
   async pauseFrequency() {
-    try {
-      if (this.sound) {
-        await this.sound.pauseAsync();
-        this.isPlaying = false;
-        await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-      }
-    } catch (error) {
-      console.error('Error pausing:', error);
+    if (this.sound) {
+      this.sound.pauseAsync().catch(() => {});
       this.isPlaying = false;
     }
   }
 
-  // Resume playback
+  // Resume playback (instant)
   async resumeFrequency() {
-    try {
-      if (this.sound) {
-        await this.sound.playAsync();
-        this.isPlaying = true;
-        await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-      }
-    } catch (error) {
-      console.error('Error resuming:', error);
-      this.isPlaying = false;
+    if (this.sound) {
+      this.sound.playAsync().catch(() => {});
+      this.isPlaying = true;
     }
   }
 
-  // Stop playback
+  // Stop playback (fast)
   async stopFrequency() {
     try {
-      console.log('AudioEngine: Stopping current frequency...');
-      
       if (this.sound) {
-        console.log('AudioEngine: Sound exists, stopping and unloading...');
-        await this.sound.stopAsync();
-        await this.sound.unloadAsync();
+        this.sound.stopAsync().catch(() => {});
+        this.sound.unloadAsync().catch(() => {});
         this.sound = null;
-        console.log('AudioEngine: Sound stopped and unloaded');
       }
       
       this.isPlaying = false;
@@ -198,10 +179,7 @@ class FrequencyAudioEngine {
         clearTimeout(this.timer);
         this.timer = null;
       }
-      
-      await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     } catch (error) {
-      console.error('AudioEngine: Error stopping:', error);
       // Reset state even if there's an error
       this.isPlaying = false;
       this.currentFrequency = null;
@@ -209,35 +187,25 @@ class FrequencyAudioEngine {
     }
   }
 
-  // Set volume
+  // Set volume (instant)
   async setVolume(volume) {
-    try {
-      this.volume = Math.max(0, Math.min(1, volume));
-      if (this.sound) {
-        await this.sound.setVolumeAsync(this.volume);
-      }
-    } catch (error) {
-      console.error('Error setting volume:', error);
+    this.volume = Math.max(0, Math.min(1, volume));
+    if (this.sound) {
+      this.sound.setVolumeAsync(this.volume).catch(() => {});
     }
   }
 
-  // Set timer
+  // Set timer (instant)
   async setTimer(minutes) {
-    try {
-      if (this.timer) {
-        clearTimeout(this.timer);
-        this.timer = null;
-      }
-      
-      if (minutes > 0) {
-        console.log(`AudioEngine: Setting sleep timer for ${minutes} minutes`);
-        this.timer = setTimeout(() => {
-          console.log('AudioEngine: Sleep timer expired, stopping frequency');
-          this.stopFrequency();
-        }, minutes * 60 * 1000);
-      }
-    } catch (error) {
-      console.error('Error setting timer:', error);
+    if (this.timer) {
+      clearTimeout(this.timer);
+      this.timer = null;
+    }
+    
+    if (minutes > 0) {
+      this.timer = setTimeout(() => {
+        this.stopFrequency();
+      }, minutes * 60 * 1000);
     }
   }
 

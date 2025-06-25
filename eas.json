@@ -16,6 +16,12 @@
       "android": {
         "buildType": "apk"
       }
+    },
+    "standalone": {
+      "android": {
+        "buildType": "apk",
+        "developmentClient": false
+      }
     }
   },
   "submit": {

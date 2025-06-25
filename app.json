@@ -4,26 +4,55 @@
     "slug": "magicwave",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/icon.png",
-    "userInterfaceStyle": "light",
+    "icon": "./assets/magicwave.jpg",
+    "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "splash": {
-      "image": "./assets/splash-icon.png",
-      "resizeMode": "contain",
-      "backgroundColor": "#4CAF50"
+      "image": "./assets/magicwave.jpg",
+      "resizeMode": "cover",
+      "backgroundColor": "#1A1A1A"
     },
     "ios": {
       "supportsTablet": true
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#4CAF50"
+        "foregroundImage": "./assets/magicwave.jpg",
+        "backgroundColor": "#1A1A1A"
       },
       "edgeToEdgeEnabled": true,
       "package": "com.meow9lives.magicwave",
       "permissions": [
-        "android.permission.INTERNET"
+        "android.permission.INTERNET",
+        "android.permission.ACCESS_NETWORK_STATE",
+        "android.permission.QUERY_ALL_PACKAGES"
+      ],
+      "queries": [
+        {
+          "intent": {
+            "action": "android.intent.action.VIEW",
+            "data": {
+              "scheme": "https"
+            }
+          }
+        },
+        {
+          "intent": {
+            "action": "android.intent.action.VIEW",
+            "data": {
+              "scheme": "http"
+            }
+          }
+        },
+        {
+          "package": "com.instagram.android"
+        },
+        {
+          "package": "com.android.chrome"
+        },
+        {
+          "package": "com.android.browser"
+        }
       ],
       "intentFilters": [
         {
@@ -44,12 +73,13 @@
       ]
     },
     "web": {
-      "favicon": "./assets/favicon.png"
+      "favicon": "./assets/magicwave.jpg"
     },
     "extra": {
       "eas": {
-        "projectId": "34d7da8f-eb60-47ec-bd65-e0ca1ff90319"
+        "projectId": "0672523d-3bd6-4ba0-aeba-9d5523fc5fb8"
       }
-    }
+    },
+    "owner": "helicoptercat"
   }
 }

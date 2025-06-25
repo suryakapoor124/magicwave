@@ -3,8 +3,8 @@ export const frequencyCategories = {
     color: '#059669', // Emerald green
     darkColor: '#10B981',
     frequencies: [
-      { id: 1, name: 'Serenity Wave', frequency: 432, description: 'Universal harmony and relaxation', duration: 30, image: '�' },
-      { id: 2, name: 'Zen Garden', frequency: 528, description: 'Love frequency for DNA repair', duration: 25, image: '�' },
+      { id: 1, name: 'Serenity Wave', frequency: 432, description: 'Universal harmony and relaxation', duration: 30, image: '🌸' },
+      { id: 2, name: 'Zen Garden', frequency: 528, description: 'Love frequency for DNA repair', duration: 25, image: '🌿' },
       { id: 3, name: 'Peaceful Mind', frequency: 396, description: 'Liberation from fear and guilt', duration: 20, image: '🧘‍♂️' },
       { id: 4, name: 'Ocean Depths', frequency: 110, description: 'Deep relaxation and grounding', duration: 35, image: '🌊' },
       { id: 5, name: 'Mountain Breeze', frequency: 256, description: 'Natural balance and calm', duration: 40, image: '🏔️' }
@@ -16,13 +16,13 @@ export const frequencyCategories = {
     frequencies: [
       { id: 91, name: 'Hare Krishna Mantra', frequency: 741, description: 'Love, devotion and divine play', duration: 40, image: '🪈' },
       { id: 91.1, name: 'Krishna Flute Melody', frequency: 528, description: 'Divine music for heart opening', duration: 35, image: '🎵' },
-      { id: 88, name: 'Om Namah Shivaya', frequency: 136.1, description: 'Transformation and destruction of evil', duration: 30, image: '�' },
-      { id: 88.1, name: 'Shiva Tandava', frequency: 40, description: 'Cosmic dance rhythm', duration: 25, image: '�' },
+      { id: 88, name: 'Om Namah Shivaya', frequency: 136.1, description: 'Transformation and destruction of evil', duration: 30, image: '🔱' },
+      { id: 88.1, name: 'Shiva Tandava', frequency: 40, description: 'Cosmic dance rhythm', duration: 25, image: '💃' },
       { id: 93, name: 'Hanuman Chalisa', frequency: 963, description: 'Strength, courage and devotion', duration: 30, image: '🐒' },
       { id: 93.1, name: 'Bajrang Bali', frequency: 40, description: 'Thunderous strength', duration: 20, image: '⚡' },
-      { id: 87, name: 'Ganesha Mantra', frequency: 426.7, description: 'Remover of obstacles and new beginnings', duration: 25, image: '�' },
+      { id: 87, name: 'Ganesha Mantra', frequency: 426.7, description: 'Remover of obstacles and new beginnings', duration: 25, image: '🐘' },
       { id: 89, name: 'Om Namo Narayanaya', frequency: 528, description: 'Preservation and protection', duration: 35, image: '🪷' },
-      { id: 90, name: 'Lakshmi Mantra', frequency: 639, description: 'Wealth, prosperity and abundance', duration: 20, image: '�' },
+      { id: 90, name: 'Lakshmi Mantra', frequency: 639, description: 'Wealth, prosperity and abundance', duration: 20, image: '💰' },
       { id: 92, name: 'Saraswati Vandana', frequency: 852, description: 'Knowledge, wisdom and arts', duration: 25, image: '📚' },
       { id: 94, name: 'Durga Mantra', frequency: 432, description: 'Divine feminine power and protection', duration: 35, image: '⚔️' },
       { id: 95, name: 'Ram Mantra', frequency: 396, description: 'Righteousness and virtue', duration: 45, image: '🏹' },

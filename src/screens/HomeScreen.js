@@ -9,6 +9,8 @@ import {
   SafeAreaView,
   StatusBar,
   RefreshControl,
+  Platform,
+  Image,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
@@ -113,16 +115,12 @@ export const HomeScreen = ({ navigation }) => {
     }
   };
 
-  const handleFrequencyPress = async (frequency) => {
-    try {
-      // Use audio context to play frequency
-      await playFrequency(frequency);
-      
-      // Add to recent
-      await favoritesManager.addToRecent(frequency);
-    } catch (error) {
-      console.error('Error handling frequency press:', error);
-    }
+  const handleFrequencyPress = (frequency) => {
+    // Non-blocking frequency play for instant UI response
+    playFrequency(frequency);
+    
+    // Add to recent in background (non-blocking)
+    favoritesManager.addToRecent(frequency).catch(() => {});
   };
 
   const handleRefresh = async () => {
@@ -145,75 +143,107 @@ export const HomeScreen = ({ navigation }) => {
 
   const renderHeader = () => {
     return (
-      <View style={styles.header}>
-        {/* Top Bar with App Name and About Button */}
+      <View style={[styles.header, { backgroundColor: theme.colors.surface }]}>
+        {/* Modern Top Bar */}
         <View style={styles.topBar}>
-          <View style={styles.greetingSection}>
-            <Text style={[styles.greeting, { color: theme.colors.onSurface }]}>
-              MagicWave
-            </Text>
+          <View style={styles.brandSection}>
+            <View style={styles.logoContainer}>
+              <Image
+                source={require('../../assets/magicwave.jpg')}
+                style={styles.logoImage}
+                resizeMode="cover"
+              />
+            </View>
+            <View style={styles.brandContent}>
+              <Text style={[styles.appTitle, { color: theme.colors.onSurface }]}>
+                MagicWave
+              </Text>
+              <Text style={[styles.appSubtitle, { color: theme.colors.onSurfaceVariant }]}>
+                Frequency Therapy
+              </Text>
+            </View>
           </View>
           
-          <View style={styles.headerButtons}>
+          <View style={styles.headerActions}>
             <TouchableOpacity 
               onPress={toggleTheme}
-              style={[styles.headerButton, { backgroundColor: theme.colors.surfaceVariant }]}
+              style={[styles.actionButton, { backgroundColor: theme.colors.surfaceContainer }]}
             >
               <Ionicons 
-                name={isDark ? 'sunny-outline' : 'moon-outline'} 
-                size={22} 
+                name={isDark ? 'sunny' : 'moon'} 
+                size={20} 
                 color={theme.colors.onSurface} 
               />
             </TouchableOpacity>
             
             <TouchableOpacity 
               onPress={() => navigation.navigate('About')}
-              style={[styles.headerButton, { backgroundColor: theme.colors.surfaceVariant }]}
+              style={[styles.actionButton, { backgroundColor: theme.colors.surfaceContainer }]}
             >
-              <Ionicons name="information-circle-outline" size={22} color={theme.colors.onSurface} />
+              <Ionicons name="person-circle-outline" size={20} color={theme.colors.onSurface} />
             </TouchableOpacity>
           </View>
         </View>
 
-        {/* Quick access tiles (Spotify-style) */}
-        <View style={styles.quickAccess}>
+        {/* Professional Quick Access Grid */}
+        <View style={styles.quickAccessGrid}>
           <TouchableOpacity 
-            style={[styles.quickTile, { backgroundColor: theme.colors.surfaceContainer }]}
+            style={[styles.quickAccessCard, { backgroundColor: theme.colors.surfaceContainer }]}
             onPress={() => navigation.navigate('Favorites')}
           >
-            <Ionicons name="heart" size={16} color={theme.colors.primary} />
-            <Text style={[styles.quickTileText, { color: theme.colors.onSurface }]}>
-              Liked Frequencies
+            <LinearGradient
+              colors={[theme.colors.primary + '20', theme.colors.primary + '10']}
+              style={styles.quickIconContainer}
+            >
+              <Ionicons name="heart" size={16} color={theme.colors.primary} />
+            </LinearGradient>
+            <Text style={[styles.quickAccessText, { color: theme.colors.onSurface }]}>
+              Favorites
             </Text>
           </TouchableOpacity>
 
           <TouchableOpacity 
-            style={[styles.quickTile, { backgroundColor: theme.colors.surfaceContainer }]}
+            style={[styles.quickAccessCard, { backgroundColor: theme.colors.surfaceContainer }]}
             onPress={() => setSelectedCategory('Chill Vibes Only')}
           >
-            <Text style={styles.quickTileEmoji}>🌊</Text>
-            <Text style={[styles.quickTileText, { color: theme.colors.onSurface }]}>
-              Chill Vibes
+            <LinearGradient
+              colors={[theme.colors.secondary + '20', theme.colors.secondary + '10']}
+              style={styles.quickIconContainer}
+            >
+              <Text style={styles.quickAccessEmoji}>🌊</Text>
+            </LinearGradient>
+            <Text style={[styles.quickAccessText, { color: theme.colors.onSurface }]}>
+              Chill
             </Text>
           </TouchableOpacity>
 
           <TouchableOpacity 
-            style={[styles.quickTile, { backgroundColor: theme.colors.surfaceContainer }]}
+            style={[styles.quickAccessCard, { backgroundColor: theme.colors.surfaceContainer }]}
             onPress={() => setSelectedCategory('Deep Sleep Ops')}
           >
-            <Text style={styles.quickTileEmoji}>🌙</Text>
-            <Text style={[styles.quickTileText, { color: theme.colors.onSurface }]}>
-              Sleep Sounds
+            <LinearGradient
+              colors={[theme.colors.tertiary + '20', theme.colors.tertiary + '10']}
+              style={styles.quickIconContainer}
+            >
+              <Text style={styles.quickAccessEmoji}>🌙</Text>
+            </LinearGradient>
+            <Text style={[styles.quickAccessText, { color: theme.colors.onSurface }]}>
+              Sleep
             </Text>
           </TouchableOpacity>
 
           <TouchableOpacity 
-            style={[styles.quickTile, { backgroundColor: theme.colors.surfaceContainer }]}
+            style={[styles.quickAccessCard, { backgroundColor: theme.colors.surfaceContainer }]}
             onPress={() => setSelectedCategory('Brain Gym')}
           >
-            <Text style={styles.quickTileEmoji}>🧠</Text>
-            <Text style={[styles.quickTileText, { color: theme.colors.onSurface }]}>
-              Focus Mode
+            <LinearGradient
+              colors={[theme.colors.accent + '20', theme.colors.accent + '10']}
+              style={styles.quickIconContainer}
+            >
+              <Text style={styles.quickAccessEmoji}>🧠</Text>
+            </LinearGradient>
+            <Text style={[styles.quickAccessText, { color: theme.colors.onSurface }]}>
+              Focus
             </Text>
           </TouchableOpacity>
         </View>
@@ -222,7 +252,10 @@ export const HomeScreen = ({ navigation }) => {
   };
 
   const renderCategoryTabs = () => (
-    <View style={styles.categoryContainer}>
+    <View style={[styles.categorySection, { backgroundColor: theme.colors.surface }]}>
+      <Text style={[styles.sectionTitle, { color: theme.colors.onSurface }]}>
+        Browse Categories
+      </Text>
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
@@ -235,34 +268,35 @@ export const HomeScreen = ({ navigation }) => {
             : getCategoryColor(category, isDark);
           
           return (
-            <BouncyButton
+            <TouchableOpacity
               key={category}
               onPress={() => handleCategorySelect(category)}
               style={[
-                styles.categoryTab,
+                styles.modernCategoryChip,
                 {
                   backgroundColor: isSelected 
                     ? categoryColor 
-                    : theme.colors.surfaceVariant,
-                  borderColor: categoryColor,
-                  borderWidth: isSelected ? 0 : 1,
+                    : theme.colors.surfaceContainer,
+                  borderColor: isSelected ? categoryColor : 'transparent',
+                  borderWidth: 1,
                 }
               ]}
+              activeOpacity={0.8}
             >
               <Text
                 style={[
-                  styles.categoryText,
+                  styles.categoryChipText,
                   {
                     color: isSelected 
                       ? 'white' 
-                      : theme.colors.onSurfaceVariant,
+                      : theme.colors.onSurface,
                     fontWeight: isSelected ? '600' : '500',
                   }
                 ]}
               >
                 {category}
               </Text>
-            </BouncyButton>
+            </TouchableOpacity>
           );
         })}
       </ScrollView>
@@ -275,17 +309,19 @@ export const HomeScreen = ({ navigation }) => {
   };
 
   const renderFrequencyGrid = () => (
-    <View style={styles.frequencyGrid}>
-      {frequencies.map((frequency, index) => (
-        <FrequencyCard
-          key={`${frequency.id}-${frequency.category}`}
-          frequency={frequency}
-          onPress={handleFrequencyPress}
-          index={index}
-          isPlaying={currentFrequency?.id === frequency.id && isPlaying}
-          style={styles.frequencyCard}
-        />
-      ))}
+    <View style={styles.contentSection}>
+      <View style={styles.frequenciesGrid}>
+        {frequencies.map((frequency, index) => (
+          <FrequencyCard
+            key={`${frequency.id}-${frequency.category}`}
+            frequency={frequency}
+            onPress={handleFrequencyPress}
+            index={index}
+            isPlaying={currentFrequency?.id === frequency.id && isPlaying}
+            style={styles.frequencyCardStyle}
+          />
+        ))}
+      </View>
     </View>
   );
 
@@ -363,7 +399,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   statusBarSpacer: {
-    height: 10, // Extra padding for status bar
+    height: Platform.OS === 'ios' ? 0 : 20, // Adaptive status bar spacing
   },
   loadingContainer: {
     flex: 1,
@@ -374,162 +410,194 @@ const styles = StyleSheet.create({
   loadingText: {
     fontSize: 18,
     fontWeight: '600',
+    letterSpacing: 0.15,
   },
   scrollView: {
     flex: 1,
   },
   scrollContent: {
-    paddingBottom: 150, // Increased for playback bar
+    paddingBottom: 150, // Space for playback bar
   },
+  
+  // Modern Header Styles
   header: {
-    padding: 20,
-    paddingBottom: 10,
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
   },
   topBar: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
+    justifyContent: 'space-between',
     marginBottom: 20,
   },
-  greetingSection: {
+  brandSection: {
+    flexDirection: 'row',
+    alignItems: 'center',
     flex: 1,
   },
-  greeting: {
+  logoContainer: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    overflow: 'hidden',
+    marginRight: 12,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+  },
+  logoImage: {
+    width: '100%',
+    height: '100%',
+  },
+  brandContent: {
+    flex: 1,
+  },
+  appTitle: {
     fontSize: 24,
     fontWeight: '700',
+    letterSpacing: 0.25,
   },
-  headerButtons: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
-  headerButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  aboutButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  quickAccess: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 12,
-    marginBottom: 24,
-  },
-  quickTile: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1,
-    minWidth: (width - 64) / 2,
-    height: 60,
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    gap: 12,
-  },
-  quickTileEmoji: {
-    fontSize: 20,
-  },
-  quickTileText: {
+  appSubtitle: {
     fontSize: 14,
-    fontWeight: '600',
-    flex: 1,
+    fontWeight: '500',
+    opacity: 0.8,
+    letterSpacing: 0.1,
   },
-  sectionHeader: {
-    marginBottom: 16,
+  headerActions: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  actionButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    elevation: 1,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 0.5 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+  },
+  
+  // Quick Access Grid
+  quickAccessGrid: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  quickAccessCard: {
+    flex: 1,
+    alignItems: 'center',
+    paddingVertical: 16,
+    paddingHorizontal: 8,
+    borderRadius: 16,
+    elevation: 1,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 0.5 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+  },
+  quickIconContainer: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  quickAccessText: {
+    fontSize: 12,
+    fontWeight: '600',
+    textAlign: 'center',
+    letterSpacing: 0.1,
+  },
+  quickAccessEmoji: {
+    fontSize: 16,
+  },
+  
+  // Category Section
+  categorySection: {
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    elevation: 1,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 0.5 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
   },
   sectionTitle: {
-    fontSize: 22,
-    fontWeight: '700',
-  },
-  categoryContainer: {
-    marginBottom: 20,
+    fontSize: 20,
+    fontWeight: '600',
+    marginBottom: 16,
+    letterSpacing: 0.15,
   },
   categoryScroll: {
+    paddingHorizontal: 4,
+    gap: 8,
+  },
+  modernCategoryChip: {
     paddingHorizontal: 20,
-    gap: 12,
-  },
-  categoryTab: {
-    paddingHorizontal: 16,
-    paddingVertical: 10,
+    paddingVertical: 12,
     borderRadius: 20,
-    minWidth: 80,
-    alignItems: 'center',
+    marginHorizontal: 4,
+    elevation: 1,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 0.5 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
   },
-  categoryText: {
+  categoryChipText: {
     fontSize: 14,
-  },
-  nowPlayingContainer: {
-    marginHorizontal: 20,
-    marginBottom: 20,
-  },
-  nowPlaying: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 16,
-    borderRadius: 16,
-    borderWidth: 1,
-  },
-  nowPlayingContent: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
-  nowPlayingIcon: {
-    fontSize: 24,
-  },
-  nowPlayingInfo: {
-    flex: 1,
-  },
-  nowPlayingName: {
-    fontSize: 16,
-    fontWeight: '600',
-    marginBottom: 2,
-  },
-  nowPlayingFreq: {
-    fontSize: 12,
     fontWeight: '500',
+    letterSpacing: 0.1,
   },
-  stopButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    justifyContent: 'center',
-    alignItems: 'center',
+  
+  // Content Section
+  contentSection: {
+    paddingHorizontal: 20,
+    paddingTop: 16,
   },
-  frequencyGrid: {
+  frequenciesGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'space-between',
-    paddingHorizontal: 20,
+    marginTop: 8,
   },
-  frequencyCard: {
-    width: (width - 56) / 2, // 2 columns with padding
+  frequencyCardStyle: {
+    width: (width - 48) / 2, // 2-column grid with proper spacing
+    marginBottom: 16,
   },
+  
+  // Empty State
   emptyState: {
     alignItems: 'center',
-    justifyContent: 'center',
-    padding: 40,
-    marginHorizontal: 20,
+    paddingVertical: 60,
+    paddingHorizontal: 32,
   },
   emptyIcon: {
     fontSize: 48,
     marginBottom: 16,
+    opacity: 0.6,
   },
   emptyTitle: {
     fontSize: 20,
     fontWeight: '600',
     marginBottom: 8,
+    textAlign: 'center',
+    letterSpacing: 0.15,
   },
   emptySubtitle: {
-    fontSize: 14,
+    fontSize: 16,
     textAlign: 'center',
+    opacity: 0.8,
+    lineHeight: 24,
+    letterSpacing: 0.1,
   },
 });

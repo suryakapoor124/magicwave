@@ -8,50 +8,46 @@ import {
   Animated,
   Easing,
   Modal,
-  Alert,
+  Platform,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../utils/theme';
 import { useAudioContext } from '../contexts/AudioContext';
-import { BouncyButton, PulseView } from './Animated';
+import { PulseView } from './Animated';
 import * as Haptics from 'expo-haptics';
 import Slider from '@react-native-community/slider';
 
 const { width } = Dimensions.get('window');
 
-// Animated wave bar component for 60fps smooth animation
-const AnimatedWaveBar = ({ height, delay }) => {
+// Lightweight animated wave component - minimal animations for performance
+const AnimatedWaveBar = React.memo(({ isPlaying, color, delay, height }) => {
   const scaleAnim = useRef(new Animated.Value(0.3)).current;
 
   useEffect(() => {
-    const createWaveAnimation = () => {
-      return Animated.loop(
+    if (isPlaying) {
+      const animation = Animated.loop(
         Animated.sequence([
           Animated.timing(scaleAnim, {
             toValue: 1,
-            duration: 400,
-            delay,
+            duration: 1000,
             easing: Easing.inOut(Easing.ease),
             useNativeDriver: true,
           }),
           Animated.timing(scaleAnim, {
             toValue: 0.3,
-            duration: 400,
+            duration: 1000,
             easing: Easing.inOut(Easing.ease),
             useNativeDriver: true,
           }),
         ])
       );
-    };
-
-    const animation = createWaveAnimation();
-    animation.start();
-
-    return () => {
-      animation.stop();
-    };
-  }, [scaleAnim, delay]);
+      animation.start();
+      return () => animation.stop();
+    } else {
+      scaleAnim.setValue(0.3);
+    }
+  }, [isPlaying]);
 
   return (
     <Animated.View 
@@ -59,19 +55,19 @@ const AnimatedWaveBar = ({ height, delay }) => {
         styles.waveBar, 
         { 
           height,
-          transform: [{ scaleY: scaleAnim }]
+          backgroundColor: color,
+          transform: [{ scaleY: scaleAnim }],
         }
       ]} 
     />
   );
-};
+});
 
 export const SpotifyPlaybackBar = () => {
   const { theme, isDark } = useTheme();
   const { 
     currentFrequency, 
     isPlaying, 
-    progress, 
     togglePlayPause, 
     toggleFavorite, 
     isFavorite,
@@ -82,28 +78,82 @@ export const SpotifyPlaybackBar = () => {
     setTimerDuration 
   } = useAudioContext();
   
+  // All useState hooks at the top
   const [showVolumeControl, setShowVolumeControl] = useState(false);
   const [showTimerModal, setShowTimerModal] = useState(false);
+  const [timerMinutes, setTimerMinutes] = useState(60);
+  const [timeRemaining, setTimeRemaining] = useState(null);
+  const [slideUpAnim] = useState(new Animated.Value(0));
+  const [opacityAnim] = useState(new Animated.Value(0));
+  
+  // All useRef hooks at the top
+  const timerRef = useRef(null);
+
+  // Ultra-lightweight slide animation
+  useEffect(() => {
+    if (currentFrequency) {
+      slideUpAnim.setValue(1);
+      opacityAnim.setValue(1);
+    } else {
+      slideUpAnim.setValue(0);
+      opacityAnim.setValue(0);
+    }
+  }, [currentFrequency]);
+
+  // Simplified timer countdown - update every 5 seconds instead of every second
+  useEffect(() => {
+    if (timer && isPlaying) {
+      const startTime = Date.now();
+      const endTime = startTime + (timer * 60 * 1000);
+      
+      setTimeRemaining(timer * 60);
+      
+      timerRef.current = setInterval(() => {
+        const now = Date.now();
+        const remainingMs = endTime - now;
+        
+        if (remainingMs <= 0) {
+          clearInterval(timerRef.current);
+          setTimeRemaining(null);
+          setTimerDuration(0);
+          stopFrequency();
+        } else {
+          setTimeRemaining(Math.ceil(remainingMs / 1000));
+        }
+      }, 5000); // Update every 5 seconds instead of 1 second for better performance
+    } else {
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+        setTimeRemaining(null);
+      }
+    }
+
+    return () => {
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+      }
+    };
+  }, [timer, isPlaying]);
 
   if (!currentFrequency) return null;
 
-  const handlePlayPause = async () => {
-    await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    togglePlayPause();
+  const handlePlayPause = () => {
+    togglePlayPause(); // Remove all haptics and async for instant response
   };
 
-  const handleFavorite = async () => {
-    await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+  const handleFavorite = () => {
     toggleFavorite(currentFrequency);
   };
 
-  const handleStop = async () => {
-    await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+  const handleStop = () => {
     stopFrequency();
+    setTimerDuration(0);
   };
 
-  const handleVolumeChange = async (newVolume) => {
-    await setVolumeLevel(newVolume);
+  const handleVolumeChange = (newVolume) => {
+    // Direct, instant volume update
+    console.log('Volume changing to:', newVolume);
+    setVolumeLevel(newVolume);
   };
 
   const toggleVolumeControl = () => {
@@ -117,7 +167,17 @@ export const SpotifyPlaybackBar = () => {
   const handleSetTimer = (minutes) => {
     setTimerDuration(minutes);
     setShowTimerModal(false);
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+  };
+
+  const handleClearTimer = () => {
+    setTimerDuration(0);
+    setShowTimerModal(false);
+  };
+
+  const formatTime = (seconds) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
   const isFrequencyFavorite = isFavorite(currentFrequency);
@@ -126,37 +186,73 @@ export const SpotifyPlaybackBar = () => {
     <View style={[
       styles.container,
       { 
-        backgroundColor: isDark ? theme.colors.surfaceContainer : theme.colors.surface,
-        borderTopColor: isDark ? theme.colors.outline : theme.colors.outlineVariant,
+        backgroundColor: theme.colors.surface,
+        borderTopColor: theme.colors.outline + '20',
       }
     ]}>
-      {/* Progress bar */}
+      {/* Enhanced Progress Indicator with Glow Effect */}
       <View style={styles.progressContainer}>
-        <View style={[styles.progressBar, { backgroundColor: theme.colors.outline }]}>
-          <LinearGradient
-            colors={['#DC2626', '#EF4444']}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 0 }}
-            style={[styles.progressFill, { width: `${progress}%` }]}
-          />
-        </View>
+        <LinearGradient
+          colors={[theme.colors.primary, theme.colors.secondary]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 0 }}
+          style={[
+            styles.progressBar, 
+            { 
+              opacity: isPlaying ? 1 : 0.4,
+            }
+          ]}
+        />
+        {isPlaying && (
+          <View style={styles.playingIndicator}>
+            <AnimatedWaveBar height={3} delay={0} color={theme.colors.primary} isPlaying={isPlaying} />
+            <AnimatedWaveBar height={4} delay={1} color={theme.colors.primary} isPlaying={isPlaying} />
+            <AnimatedWaveBar height={3} delay={2} color={theme.colors.primary} isPlaying={isPlaying} />
+          </View>
+        )}
       </View>
 
-      {/* Main content */}
+      {/* Timer Countdown Display - Prominently Visible */}
+      {timeRemaining && (
+        <View style={[styles.timerCountdownBar, { backgroundColor: theme.colors.primaryContainer }]}>
+          <View style={styles.timerCountdownContent}>
+            <Ionicons name="timer" size={16} color={theme.colors.onPrimaryContainer} />
+            <Text style={[styles.timerCountdownText, { color: theme.colors.onPrimaryContainer }]}>
+              Sleep timer: {formatTime(timeRemaining)} remaining
+            </Text>
+            <TouchableOpacity 
+              onPress={() => setTimerDuration(0)}
+              style={[styles.cancelTimerButton, { backgroundColor: theme.colors.onPrimaryContainer + '20' }]}
+            >
+              <Ionicons name="close" size={14} color={theme.colors.onPrimaryContainer} />
+            </TouchableOpacity>
+          </View>
+        </View>
+      )}
+
+      {/* Main Content */}
       <View style={styles.mainContent}>
+        {/* Left Section - Enhanced Track Info */}
         <View style={styles.leftSection}>
-          {/* Frequency Icon/Image */}
-          <View style={[styles.albumArt, { backgroundColor: theme.colors.primary }]}>
-            {isPlaying ? (
-              <PulseView pulseScale={1.1} pulseDuration={1000}>
-                <Text style={styles.albumIcon}>{currentFrequency.image}</Text>
-              </PulseView>
-            ) : (
+          <View style={[
+            styles.albumArt, 
+            { 
+              backgroundColor: theme.colors.primary + '20',
+              borderColor: theme.colors.primary + '30',
+              shadowColor: theme.colors.primary,
+              shadowOffset: { width: 0, height: 2 },
+              shadowOpacity: isPlaying ? 0.2 : 0,
+              shadowRadius: 4,
+              elevation: isPlaying ? 2 : 0,
+            }
+          ]}>
+            {currentFrequency.image && currentFrequency.image !== '�' ? (
               <Text style={styles.albumIcon}>{currentFrequency.image}</Text>
+            ) : (
+              <Ionicons name="musical-notes" size={20} color={theme.colors.primary} />
             )}
           </View>
 
-          {/* Track info */}
           <View style={styles.trackInfo}>
             <Text 
               style={[styles.trackTitle, { color: theme.colors.onSurface }]}
@@ -164,143 +260,307 @@ export const SpotifyPlaybackBar = () => {
             >
               {currentFrequency.name}
             </Text>
-            <Text 
-              style={[styles.trackSubtitle, { color: theme.colors.onSurfaceVariant }]}
-              numberOfLines={1}
-            >
-              {currentFrequency.frequency}Hz • {currentFrequency.category}
-            </Text>
+            <View style={styles.trackSubtitleContainer}>
+              <Text 
+                style={[styles.trackSubtitle, { color: theme.colors.onSurfaceVariant }]}
+                numberOfLines={1}
+              >
+                {currentFrequency.frequency}Hz • {currentFrequency.category}
+              </Text>
+            </View>
           </View>
         </View>
 
-        {/* Right section - Controls */}
+        {/* Right Section - Optimized Controls */}
         <View style={styles.rightSection}>
-          {/* Close button */}
-          <BouncyButton style={styles.controlButton} onPress={handleStop}>
-            <Ionicons 
-              name="close" 
-              size={20} 
-              color={theme.colors.onSurfaceVariant} 
-            />
-          </BouncyButton>
-
-          {/* Volume button */}
-          <BouncyButton style={styles.controlButton} onPress={toggleVolumeControl}>
+          {/* Volume button - simplified */}
+          <TouchableOpacity 
+            style={[
+              styles.controlButton, 
+              { 
+                backgroundColor: showVolumeControl 
+                  ? theme.colors.primary + '20'
+                  : theme.colors.surfaceContainer,
+              }
+            ]} 
+            onPress={toggleVolumeControl}
+            activeOpacity={0.7}
+          >
             <Ionicons 
               name={volume > 0.5 ? "volume-high" : volume > 0 ? "volume-medium" : "volume-mute"} 
-              size={20} 
-              color={theme.colors.onSurfaceVariant} 
+              size={18} 
+              color={showVolumeControl ? theme.colors.primary : theme.colors.onSurface} 
             />
-          </BouncyButton>
+          </TouchableOpacity>
 
-          {/* Like button */}
-          <BouncyButton style={styles.controlButton} onPress={handleFavorite}>
-            <Ionicons 
-              name={isFrequencyFavorite ? "heart" : "heart-outline"} 
-              size={20} 
-              color={isFrequencyFavorite ? theme.colors.primary : theme.colors.onSurfaceVariant} 
-            />
-          </BouncyButton>
-
-          {/* Timer button */}
-          <BouncyButton style={styles.controlButton} onPress={handleTimerPress}>
+          {/* Timer button - simplified */}
+          <TouchableOpacity 
+            style={[
+              styles.controlButton, 
+              { 
+                backgroundColor: timer ? theme.colors.primary + '20' : theme.colors.surfaceContainer,
+              }
+            ]} 
+            onPress={handleTimerPress}
+            activeOpacity={0.7}
+          >
             <Ionicons 
               name="timer" 
-              size={20} 
-              color={timer ? theme.colors.primary : theme.colors.onSurfaceVariant} 
+              size={18} 
+              color={timer ? theme.colors.primary : theme.colors.onSurface} 
             />
-          </BouncyButton>
+          </TouchableOpacity>
 
-          {/* Play/Pause button */}
-          <BouncyButton 
-            style={styles.playButton}
+          {/* Favorite button - simplified */}
+          <TouchableOpacity 
+            style={[
+              styles.controlButton, 
+              { 
+                backgroundColor: isFrequencyFavorite 
+                  ? theme.colors.primary + '20' 
+                  : theme.colors.surfaceContainer,
+              }
+            ]} 
+            onPress={handleFavorite}
+            activeOpacity={0.7}
+          >
+            <Ionicons 
+              name={isFrequencyFavorite ? "heart" : "heart-outline"} 
+              size={18} 
+              color={isFrequencyFavorite ? theme.colors.primary : theme.colors.onSurface} 
+            />
+          </TouchableOpacity>
+
+          {/* Play/Pause button - simplified */}
+          <TouchableOpacity 
+            style={[
+              styles.playButton, 
+              { backgroundColor: theme.colors.primary }
+            ]}
             onPress={handlePlayPause}
+            activeOpacity={0.8}
           >
             <Ionicons 
               name={isPlaying ? 'pause' : 'play'} 
               size={24} 
               color="white" 
             />
-          </BouncyButton>
+          </TouchableOpacity>
+
+          {/* Stop button - simplified */}
+          <TouchableOpacity 
+            style={[
+              styles.controlButton, 
+              { backgroundColor: theme.colors.surfaceContainer }
+            ]} 
+            onPress={handleStop}
+            activeOpacity={0.7}
+          >
+            <Ionicons 
+              name="stop" 
+              size={18} 
+              color={theme.colors.onSurface} 
+            />
+          </TouchableOpacity>
         </View>
       </View>
 
-      {/* Volume Control Slider */}
+      {/* Working Volume Control - Community Slider */}
       {showVolumeControl && (
-        <View style={styles.volumeContainer}>
+        <View 
+          style={[
+            styles.volumeContainer, 
+            { 
+              backgroundColor: theme.colors.surfaceContainer,
+            }
+          ]}
+        >
           <View style={styles.volumeSection}>
-            <Ionicons name="volume-low" size={16} color={theme.colors.onSurfaceVariant} />
-            <Slider
-              style={styles.volumeSlider}
-              minimumValue={0}
-              maximumValue={1}
-              value={volume}
-              onValueChange={handleVolumeChange}
-              minimumTrackTintColor={theme.colors.primary}
-              maximumTrackTintColor={theme.colors.outline}
-              thumbTintColor={theme.colors.primary}
-              step={0.1}
-            />
-            <Ionicons name="volume-high" size={16} color={theme.colors.onSurfaceVariant} />
-            <Text style={[styles.volumeText, { color: theme.colors.onSurfaceVariant }]}>
+            <TouchableOpacity onPress={() => handleVolumeChange(0)}>
+              <Ionicons name="volume-mute" size={16} color={theme.colors.onSurfaceVariant} />
+            </TouchableOpacity>
+            
+            {/* Community Slider with touch debugging */}
+            <View style={styles.sliderWrapper}>
+              <Slider
+                style={styles.volumeSlider}
+                minimumValue={0}
+                maximumValue={1}  
+                value={volume}
+                onValueChange={handleVolumeChange}
+                onSlidingStart={() => console.log('Slider started')}
+                onSlidingComplete={(value) => {
+                  console.log('Slider completed:', value);
+                  handleVolumeChange(value);
+                }}
+                minimumTrackTintColor={theme.colors.primary}
+                maximumTrackTintColor={theme.colors.outline + '60'}
+                thumbTintColor={theme.colors.primary}
+                step={0.01}
+                tapToSeek={true}
+              />
+            </View>
+            
+            <TouchableOpacity onPress={() => handleVolumeChange(1)}>
+              <Ionicons name="volume-high" size={16} color={theme.colors.onSurfaceVariant} />
+            </TouchableOpacity>
+            
+            <Text style={[styles.volumeText, { color: theme.colors.onSurface }]}>
               {Math.round(volume * 100)}%
             </Text>
+          </View>
+          
+          {/* Quick volume buttons for testing */}
+          <View style={styles.quickVolumeButtons}>
+            <TouchableOpacity 
+              style={[styles.quickVolumeButton, { backgroundColor: theme.colors.primary }]}
+              onPress={() => handleVolumeChange(0.25)}
+            >
+              <Text style={styles.quickVolumeText}>25%</Text>
+            </TouchableOpacity>
+            <TouchableOpacity 
+              style={[styles.quickVolumeButton, { backgroundColor: theme.colors.primary }]}
+              onPress={() => handleVolumeChange(0.5)}
+            >
+              <Text style={styles.quickVolumeText}>50%</Text>
+            </TouchableOpacity>
+            <TouchableOpacity 
+              style={[styles.quickVolumeButton, { backgroundColor: theme.colors.primary }]}
+              onPress={() => handleVolumeChange(0.75)}
+            >
+              <Text style={styles.quickVolumeText}>75%</Text>
+            </TouchableOpacity>
+            <TouchableOpacity 
+              style={[styles.quickVolumeButton, { backgroundColor: theme.colors.primary }]}
+              onPress={() => handleVolumeChange(1)}
+            >
+              <Text style={styles.quickVolumeText}>100%</Text>
+            </TouchableOpacity>
           </View>
         </View>
       )}
 
-      {/* Animated wave indicators when playing */}
-      {isPlaying && (
-        <View style={styles.playingIndicator}>
-          <AnimatedWaveBar height={8} delay={0} />
-          <AnimatedWaveBar height={12} delay={100} />
-          <AnimatedWaveBar height={6} delay={200} />
-          <AnimatedWaveBar height={10} delay={300} />
-        </View>
-      )}
-
-      {/* Sleep Timer Modal */}
+      {/* Enhanced Timer Modal with Proper Theme */}
       <Modal
         visible={showTimerModal}
         transparent={true}
-        animationType="fade"
+        animationType="slide"
         onRequestClose={() => setShowTimerModal(false)}
       >
         <View style={styles.modalOverlay}>
           <View style={[styles.modalContent, { backgroundColor: theme.colors.surface }]}>
-            <Text style={[styles.modalTitle, { color: theme.colors.onSurface }]}>
-              Sleep Timer
-            </Text>
+            <View style={styles.modalHeader}>
+              <Text style={[styles.modalTitle, { color: theme.colors.onSurface }]}>
+                Sleep Timer
+              </Text>
+              <TouchableOpacity 
+                onPress={() => setShowTimerModal(false)}
+                style={[styles.closeButton, { backgroundColor: theme.colors.surfaceVariant }]}
+              >
+                <Ionicons name="close" size={20} color={theme.colors.onSurfaceVariant} />
+              </TouchableOpacity>
+            </View>
+
             <Text style={[styles.modalSubtitle, { color: theme.colors.onSurfaceVariant }]}>
-              Stop playing after:
+              Audio will automatically stop after selected time
             </Text>
             
-            <View style={styles.timerOptions}>
-              {[5, 10, 15, 30, 45, 60, 90].map((minutes) => (
-                <TouchableOpacity
-                  key={minutes}
-                  style={[
-                    styles.timerOption,
-                    { backgroundColor: timer === minutes ? theme.colors.primary : theme.colors.surfaceVariant },
-                  ]}
-                  onPress={() => handleSetTimer(minutes)}
-                >
-                  <Text style={[
-                    styles.timerOptionText,
-                    { color: timer === minutes ? 'white' : theme.colors.onSurfaceVariant }
-                  ]}>
-                    {minutes}m
-                  </Text>
-                </TouchableOpacity>
-              ))}
+            {/* Slider for timer selection */}
+            <View style={[styles.sliderContainer, { backgroundColor: theme.colors.surfaceContainer }]}>
+              <View style={styles.sliderHeader}>
+                <Text style={[styles.sliderHeaderText, { color: theme.colors.onSurfaceContainer }]}>
+                  Duration (1-500 minutes)
+                </Text>
+              </View>
+              
+              <View style={styles.sliderRow}>
+                <Text style={[styles.sliderLabel, { color: theme.colors.onSurfaceContainer }]}>
+                  1 min
+                </Text>
+                <Text style={[styles.sliderLabel, { color: theme.colors.onSurfaceContainer }]}>
+                  500 min
+                </Text>
+              </View>
+              
+              <Slider
+                style={styles.timerSlider}
+                minimumValue={1}
+                maximumValue={500}
+                value={timerMinutes}
+                onValueChange={setTimerMinutes}
+                minimumTrackTintColor={theme.colors.primary}
+                maximumTrackTintColor={theme.colors.outline}
+                thumbTintColor={theme.colors.primary}
+                step={1}
+                tapToSeek={true}
+              />
+              
+              <View style={styles.selectedTimeContainer}>
+                <Text style={[styles.selectedTimeText, { color: theme.colors.primary }]}>
+                  {timerMinutes} minute{timerMinutes !== 1 ? 's' : ''}
+                </Text>
+                <Text style={[styles.selectedTimeSubtext, { color: theme.colors.onSurfaceVariant }]}>
+                  ({Math.floor(timerMinutes / 60)}h {timerMinutes % 60}m)
+                </Text>
+              </View>
+            </View>
+
+            {/* Quick select buttons */}
+            <View style={styles.quickSelectSection}>
+              <Text style={[styles.quickSelectLabel, { color: theme.colors.onSurface }]}>
+                Quick Select
+              </Text>
+              <View style={styles.quickSelectContainer}>
+                {[5, 15, 30, 60, 90, 120].map((minutes) => (
+                  <TouchableOpacity
+                    key={minutes}
+                    style={[
+                      styles.quickSelectButton,
+                      { 
+                        backgroundColor: timerMinutes === minutes 
+                          ? theme.colors.primary 
+                          : theme.colors.surfaceContainer,
+                        borderColor: timerMinutes === minutes 
+                          ? theme.colors.primary 
+                          : theme.colors.outline + '30',
+                        borderWidth: 1,
+                      },
+                    ]}
+                    onPress={() => setTimerMinutes(minutes)}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={[
+                      styles.quickSelectText,
+                      { 
+                        color: timerMinutes === minutes 
+                          ? 'white' 
+                          : theme.colors.onSurface,
+                        fontWeight: timerMinutes === minutes ? '600' : '500',
+                      }
+                    ]}>
+                      {minutes}m
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
             </View>
 
             <View style={styles.modalButtons}>
               {timer && (
                 <TouchableOpacity
-                  style={[styles.modalButton, { backgroundColor: theme.colors.errorContainer }]}
-                  onPress={() => handleSetTimer(0)}
+                  style={[
+                    styles.modalButton, 
+                    styles.clearButton, 
+                    { 
+                      backgroundColor: theme.colors.errorContainer,
+                      borderColor: theme.colors.error + '30',
+                      borderWidth: 1,
+                    }
+                  ]}
+                  onPress={handleClearTimer}
+                  activeOpacity={0.8}
                 >
+                  <Ionicons name="trash-outline" size={18} color={theme.colors.onErrorContainer} />
                   <Text style={[styles.modalButtonText, { color: theme.colors.onErrorContainer }]}>
                     Clear Timer
                   </Text>
@@ -308,11 +568,24 @@ export const SpotifyPlaybackBar = () => {
               )}
               
               <TouchableOpacity
-                style={[styles.modalButton, { backgroundColor: theme.colors.surfaceVariant }]}
-                onPress={() => setShowTimerModal(false)}
+                style={[
+                  styles.modalButton, 
+                  styles.setButton, 
+                  { 
+                    backgroundColor: theme.colors.primary,
+                    shadowColor: theme.colors.primary,
+                    shadowOffset: { width: 0, height: 2 },
+                    shadowOpacity: 0.3,
+                    shadowRadius: 4,
+                    elevation: 3,
+                  }
+                ]}
+                onPress={() => handleSetTimer(timerMinutes)}
+                activeOpacity={0.9}
               >
-                <Text style={[styles.modalButtonText, { color: theme.colors.onSurfaceVariant }]}>
-                  Cancel
+                <Ionicons name="timer" size={18} color="white" />
+                <Text style={[styles.modalButtonText, { color: 'white', fontWeight: '600' }]}>
+                  Set Timer
                 </Text>
               </TouchableOpacity>
             </View>
@@ -329,19 +602,26 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    borderTopWidth: 1,
-    elevation: 8,
+    borderTopWidth: 0.5,
+    elevation: 12,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: -2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
   },
   progressContainer: {
-    height: 2,
+    height: 3,
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
+    overflow: 'hidden',
   },
   progressBar: {
-    height: 2,
+    height: 3,
     width: '100%',
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
   },
   progressFill: {
     height: '100%',
@@ -351,8 +631,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 16,
-    paddingVertical: 12,
-    minHeight: 64,
+    paddingVertical: 14,
+    minHeight: 70,
   },
   leftSection: {
     flexDirection: 'row',
@@ -360,15 +640,17 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   albumArt: {
-    width: 48,
-    height: 48,
-    borderRadius: 8,
+    width: 52,
+    height: 52,
+    borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 12,
+    marginRight: 14,
+    borderWidth: 1,
+    elevation: 2,
   },
   albumIcon: {
-    fontSize: 24,
+    fontSize: 26,
     color: 'white',
   },
   trackInfo: {
@@ -376,45 +658,92 @@ const styles = StyleSheet.create({
     marginRight: 12,
   },
   trackTitle: {
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: '600',
-    marginBottom: 2,
+    marginBottom: 3,
+    letterSpacing: 0.1,
   },
   trackSubtitle: {
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: '400',
+    opacity: 0.8,
+    letterSpacing: 0.05,
   },
+  trackSubtitleContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  timerCountdownBar: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderBottomWidth: 0.5,
+    borderBottomColor: 'rgba(0,0,0,0.1)',
+  },
+  timerCountdownContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+  },
+  timerCountdownText: {
+    fontSize: 14,
+    fontWeight: '600',
+    letterSpacing: 0.1,
+  },
+  cancelTimerButton: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginLeft: 4,
+  },
+
   rightSection: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: 10,
   },
   controlButton: {
-    padding: 8,
-  },
-  playButton: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: '#DC2626',
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     justifyContent: 'center',
     alignItems: 'center',
+    elevation: 1,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+  },
+  playButton: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginHorizontal: 4,
   },
   playingIndicator: {
     position: 'absolute',
     bottom: 0,
-    left: 16,
-    right: 16,
-    height: 2,
+    left: 20,
+    right: 20,
+    height: 3,
     flexDirection: 'row',
     alignItems: 'flex-end',
-    gap: 2,
+    justifyContent: 'center',
+    gap: 3,
   },
   waveBar: {
-    width: 2,
-    backgroundColor: '#DC2626',
-    borderRadius: 1,
+    width: 3,
+    borderRadius: 1.5,
     transformOrigin: 'bottom',
+    elevation: 1,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.2,
+    shadowRadius: 2,
   },
   volumeContainer: {
   },
@@ -556,6 +885,65 @@ const styles = StyleSheet.create({
   volumeSlider: {
     flex: 1,
     height: 40,
+    width: '100%',
+  },
+  sliderWrapper: {
+    flex: 1,
+    marginHorizontal: 8,
+    height: 40,
+    justifyContent: 'center',
+  },
+  quickVolumeButtons: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingTop: 8,
+    gap: 8,
+  },
+  quickVolumeButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 12,
+    flex: 1,
+    alignItems: 'center',
+  },
+  quickVolumeText: {
+    color: 'white',
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  customSliderContainer: {
+    flex: 1,
+    height: 30,
+    marginHorizontal: 8,
+    justifyContent: 'center',
+    position: 'relative',
+  },
+  sliderTrack: {
+    height: 4,
+    borderRadius: 2,
+    position: 'absolute',
+    left: 0,
+    right: 0,
+  },
+  sliderActiveTrack: {
+    height: 4,
+    borderRadius: 2,
+    position: 'absolute',
+    left: 0,
+  },
+  sliderThumb: {
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+    position: 'absolute',
+    top: -6,
+    marginLeft: -8,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.2,
+    shadowRadius: 2,
   },
   volumeText: {
     fontSize: 12,
@@ -577,48 +965,127 @@ const styles = StyleSheet.create({
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+  },
+  modalContent: {
+    width: '100%',
+    maxWidth: 400,
+    borderRadius: 24,
+    padding: 24,
+    elevation: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 12,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  modalTitle: {
+    fontSize: 24,
+    fontWeight: '700',
+    letterSpacing: 0.2,
+  },
+  closeButton: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  modalContent: {
-    width: width * 0.85,
+  modalSubtitle: {
+    fontSize: 16,
+    textAlign: 'center',
+    marginBottom: 24,
+    lineHeight: 22,
+    opacity: 0.8,
+  },
+  sliderContainer: {
     borderRadius: 16,
     padding: 20,
-    elevation: 5,
+    marginBottom: 24,
+    elevation: 1,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
   },
-  modalTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
+  sliderHeader: {
+    marginBottom: 12,
+  },
+  sliderHeaderText: {
+    fontSize: 16,
+    fontWeight: '600',
     textAlign: 'center',
+    letterSpacing: 0.1,
+  },
+  sliderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     marginBottom: 8,
   },
-  modalSubtitle: {
+  sliderLabel: {
     fontSize: 14,
-    textAlign: 'center',
-    marginBottom: 20,
+    fontWeight: '500',
+    opacity: 0.7,
   },
-  timerOptions: {
+  timerSlider: {
+    width: '100%',
+    height: 40,
+    marginBottom: 16,
+  },
+  selectedTimeContainer: {
+    alignItems: 'center',
+    paddingTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(0,0,0,0.1)',
+  },
+  selectedTimeText: {
+    fontSize: 20,
+    fontWeight: '700',
+    letterSpacing: 0.2,
+  },
+  selectedTimeSubtext: {
+    fontSize: 14,
+    marginTop: 4,
+    opacity: 0.7,
+  },
+  quickSelectSection: {
+    marginBottom: 24,
+  },
+  quickSelectLabel: {
+    fontSize: 18,
+    fontWeight: '600',
+    marginBottom: 16,
+    letterSpacing: 0.1,
+  },
+  quickSelectContainer: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'center',
-    gap: 12,
-    marginBottom: 20,
+    gap: 8,
   },
-  timerOption: {
+  quickSelectButton: {
     paddingHorizontal: 16,
-    paddingVertical: 8,
+    paddingVertical: 10,
     borderRadius: 20,
-    minWidth: 60,
+    minWidth: 50,
     alignItems: 'center',
+    elevation: 1,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
   },
-  timerOptionText: {
+  quickSelectText: {
     fontSize: 14,
-    fontWeight: '600',
+    letterSpacing: 0.1,
   },
   modalButtons: {
     flexDirection: 'row',
@@ -626,14 +1093,24 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   modalButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
     paddingHorizontal: 20,
     paddingVertical: 12,
-    borderRadius: 12,
-    minWidth: 80,
-    alignItems: 'center',
+    borderRadius: 16,
+    minWidth: 120,
+    justifyContent: 'center',
+    gap: 8,
+  },
+  clearButton: {
+    flex: 1,
+  },
+  setButton: {
+    flex: 1,
   },
   modalButtonText: {
-    fontSize: 14,
+    fontSize: 16,
     fontWeight: '600',
+    letterSpacing: 0.1,
   },
 });

@@ -48,79 +48,55 @@ export const AudioProvider = ({ children }) => {
     }
   };
 
-  // Play a frequency or from queue
-  const playFrequency = async (frequency, queueList = null, index = 0) => {
-    try {
-      setIsLoading(true);
-      console.log('Playing frequency:', frequency.name, frequency.frequency + 'Hz');
-      
-      setCurrentFrequency(frequency);
-      if (queueList) {
-        setQueue(queueList);
-        setQueueIndex(index);
-      }
-      
-      await audioEngine.playFrequency(frequency);
-      setIsPlaying(true);
-      
-      // Add to recent
-      await favoritesManager.addToRecent(frequency);
-      console.log('Frequency started successfully');
-    } catch (error) {
-      console.error('Failed to play frequency:', error);
+  // Ultra-fast frequency playback (60fps smooth)
+  const playFrequency = (frequency, queueList = null, index = 0) => {
+    // Instant UI feedback - no async/await
+    setCurrentFrequency(frequency);
+    setIsPlaying(true);
+    setIsLoading(false);
+    
+    if (queueList) {
+      setQueue(queueList);
+      setQueueIndex(index);
+    }
+    
+    // Fire and forget audio start
+    audioEngine.playFrequency(frequency).catch(() => {
       setIsPlaying(false);
-    } finally {
-      setIsLoading(false);
-    }
+    });
+    
+    // Background operations
+    favoritesManager.addToRecent(frequency).catch(() => {});
   };
 
-  const pauseFrequency = async () => {
-    try {
-      await audioEngine.pauseFrequency();
-      setIsPlaying(false);
-    } catch (error) {
-      console.error('Failed to pause frequency:', error);
-    }
+  const pauseFrequency = () => {
+    setIsPlaying(false);
+    audioEngine.pauseFrequency();
   };
 
-  const resumeFrequency = async () => {
-    try {
-      await audioEngine.resumeFrequency();
-      setIsPlaying(true);
-    } catch (error) {
-      console.error('Failed to resume frequency:', error);
-    }
+  const resumeFrequency = () => {
+    setIsPlaying(true);
+    audioEngine.resumeFrequency();
   };
 
-  const stopFrequency = async () => {
-    try {
-      await audioEngine.stopFrequency();
-      setIsPlaying(false);
-      setCurrentFrequency(null);
-      setProgress(0);
-    } catch (error) {
-      console.error('Failed to stop frequency:', error);
-    }
+  const stopFrequency = () => {
+    setIsPlaying(false);
+    setCurrentFrequency(null);
+    setProgress(0);
+    audioEngine.stopFrequency();
   };
 
-  const togglePlayPause = async () => {
+  const togglePlayPause = () => {
     if (isPlaying) {
-      await pauseFrequency();
+      pauseFrequency();
     } else if (currentFrequency) {
-      await resumeFrequency();
-    } else {
-      // If no frequency is set, we can't resume
-      console.log('No frequency to resume');
+      resumeFrequency();
     }
   };
 
-  const setVolumeLevel = async (newVolume) => {
-    try {
-      await audioEngine.setVolume(newVolume);
-      setVolume(newVolume);
-    } catch (error) {
-      console.error('Failed to set volume:', error);
-    }
+  const setVolumeLevel = (newVolume) => {
+    setVolume(newVolume);
+    audioEngine.setVolume(newVolume);
   };
 
   const toggleFavorite = async (frequency) => {
@@ -144,17 +120,13 @@ export const AudioProvider = ({ children }) => {
     return (favorites || []).some(fav => fav.id === frequency.id);
   };
 
-  const setTimerDuration = async (minutes) => {
-    try {
-      if (minutes > 0) {
-        await audioEngine.setTimer(minutes);
-        setTimer(minutes);
-      } else {
-        await audioEngine.clearTimer();
-        setTimer(null);
-      }
-    } catch (error) {
-      console.error('Failed to set timer:', error);
+  const setTimerDuration = (minutes) => {
+    if (minutes > 0) {
+      setTimer(minutes);
+      audioEngine.setTimer(minutes);
+    } else {
+      setTimer(null);
+      audioEngine.clearTimer();
     }
   };
 

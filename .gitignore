@@ -1,4 +1,14 @@
 
+# APK and build files
+*.apk
+*.aab
+build/
+android/app/build/
+android/build/
+android/.gradle/
+
+# Temporary directories
+magicave-temp/
 
 # dependencies
 node_modules/

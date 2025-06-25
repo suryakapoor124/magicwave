@@ -5,15 +5,15 @@ import {
   StyleSheet,
   Dimensions,
   TouchableOpacity,
+  Platform,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme, getCategoryColor } from '../utils/theme';
-import { AnimatedCard, BouncyButton, PulseView } from './Animated';
+import { AnimatedCard, BouncyButton } from './Animated';
 import { favoritesManager } from '../utils/storage';
 
 const { width } = Dimensions.get('window');
-const cardWidth = (width - 48) / 2; // 2 columns with 16px padding
 
 export const FrequencyCard = ({ 
   frequency, 
@@ -32,24 +32,26 @@ export const FrequencyCard = ({
     : [categoryColor + '30', categoryColor + '10'];
 
   useEffect(() => {
-    checkFavoriteStatus();
+    // Fast, non-blocking favorite check
+    favoritesManager.isFavorite(frequency.id).then(setIsFavorite).catch(() => {});
   }, [frequency.id]);
 
-  const checkFavoriteStatus = async () => {
-    const favorite = await favoritesManager.isFavorite(frequency.id);
-    setIsFavorite(favorite);
-  };
-
-  const toggleFavorite = async (e) => {
+  const toggleFavorite = (e) => {
     e.stopPropagation();
     
-    if (isFavorite) {
-      await favoritesManager.removeFromFavorites(frequency.id);
-    } else {
-      await favoritesManager.addToFavorites(frequency);
-    }
-    
+    // Optimistic UI update
     setIsFavorite(!isFavorite);
+    
+    // Background operation
+    if (isFavorite) {
+      favoritesManager.removeFromFavorites(frequency.id).catch(() => {
+        setIsFavorite(true); // Revert on error
+      });
+    } else {
+      favoritesManager.addToFavorites(frequency).catch(() => {
+        setIsFavorite(false); // Revert on error
+      });
+    }
   };
 
   const handlePress = () => {
@@ -58,517 +60,225 @@ export const FrequencyCard = ({
     }
   };
 
+  // Remove heavy PulseView animation
   const FrequencyDisplay = ({ children }) => {
-    if (isPlaying) {
-      return (
-        <PulseView pulseScale={1.1} pulseDuration={800}>
-          {children}
-        </PulseView>
-      );
-    }
     return children;
   };
 
   return (
-    <AnimatedCard
-      style={[styles.card, { width: cardWidth }, style]}
+    <TouchableOpacity
+      style={[styles.modernCard, style]}
       onPress={handlePress}
-      index={index}
-      delay={100}
+      activeOpacity={0.9}
+      delayPressIn={0}
+      delayPressOut={0}
     >
       <LinearGradient
-        colors={gradientColors}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={[
-          styles.cardGradient,
-          {
-            borderColor: isPlaying ? categoryColor : theme.colors.outline,
-            borderWidth: isPlaying ? 2 : 1,
-          }
-        ]}
+        colors={isPlaying ? [categoryColor + '20', categoryColor + '05'] : [theme.colors.surface, theme.colors.surface]}
+        style={[styles.cardContainer, { 
+          borderColor: isPlaying ? categoryColor : theme.colors.outline + '20',
+          borderWidth: isPlaying ? 1.5 : 0.5,
+        }]}
       >
-        {/* Favorite Button */}
-        <TouchableOpacity
-          style={styles.favoriteButton}
-          onPress={toggleFavorite}
-          activeOpacity={0.7}
-        >
-          <Ionicons
-            name={isFavorite ? 'heart' : 'heart-outline'}
-            size={18}
-            color={isFavorite ? '#FF6B6B' : theme.colors.onSurfaceVariant}
+        {/* Card Header */}
+        <View style={styles.cardHeader}>
+          <LinearGradient
+            colors={[categoryColor, categoryColor + '80']}
+            style={styles.categoryIndicator}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
           />
-        </TouchableOpacity>
-
-        {/* Playing Indicator */}
-        {isPlaying && (
-          <View style={styles.playingIndicator}>
-            <View style={[styles.playingDot, { backgroundColor: categoryColor }]} />
-            <Text style={styles.playingText}>Playing</Text>
-          </View>
-        )}
-
-        {/* Main Content */}
-        <View style={styles.mainContent}>
-          {/* Frequency Icon */}
-          <View style={styles.iconContainer}>
-            <FrequencyDisplay>
-              <Text style={styles.frequencyIcon}>{frequency.image}</Text>
-            </FrequencyDisplay>
-          </View>
-
-          {/* Frequency Info */}
-          <View style={styles.infoContainer}>
-            <Text 
-              style={[
-                styles.frequencyName,
-                { color: theme.colors.onSurface }
-              ]}
-              numberOfLines={2}
-            >
-              {frequency.name}
-            </Text>
-            
-            <FrequencyDisplay>
-              <Text 
-                style={[
-                  styles.frequencyValue,
-                  { color: categoryColor }
-                ]}
-              >
-                {frequency.frequency}Hz
-              </Text>
-            </FrequencyDisplay>
-            
-            <Text 
-              style={[
-                styles.frequencyDescription,
-                { color: theme.colors.onSurfaceVariant }
-              ]}
-              numberOfLines={2}
-            >
-              {frequency.description}
-            </Text>
-          </View>
-
-          {/* Bottom Section */}
-          <View style={styles.bottomSection}>
-            {/* Duration Badge */}
-            <View style={styles.badgeContainer}>
-              <View 
-                style={[
-                  styles.durationBadge,
-                  { backgroundColor: categoryColor + '20' }
-                ]}
-              >
-                <Text 
-                  style={[
-                    styles.durationText,
-                    { color: categoryColor }
-                  ]}
-                >
-                  {frequency.duration}m
-                </Text>
-              </View>
-              
-              {frequency.isRecommended && (
-                <View 
-                  style={[
-                    styles.recommendedBadge,
-                    { backgroundColor: theme.colors.primary + '20' }
-                  ]}
-                >
-                  <Text 
-                    style={[
-                      styles.recommendedText,
-                      { color: theme.colors.primary }
-                    ]}
-                  >
-                    ⭐ Rec
-                  </Text>
-                </View>
-              )}
-            </View>
-
-            {/* Category Badge */}
-            {showCategory && (
-              <View style={styles.categoryContainer}>
-                <Text 
-                  style={[
-                    styles.categoryText,
-                    { color: theme.colors.onSurfaceVariant }
-                  ]}
-                  numberOfLines={1}
-                >
-                  {frequency.category}
-                </Text>
-              </View>
-            )}
-          </View>
-        </View>
-      </LinearGradient>
-    </AnimatedCard>
-  );
-};
-
-// Large frequency card for player screen
-export const LargeFrequencyCard = ({ 
-  frequency, 
-  isPlaying = false, 
-  onPress, 
-  style 
-}) => {
-  const { theme, isDark } = useTheme();
-  const [isFavorite, setIsFavorite] = useState(false);
-  
-  const categoryColor = getCategoryColor(frequency.category, isDark);
-  const gradientColors = isDark 
-    ? [categoryColor + '60', categoryColor + '30', categoryColor + '10']
-    : [categoryColor + '40', categoryColor + '20', categoryColor + '05'];
-
-  useEffect(() => {
-    checkFavoriteStatus();
-  }, [frequency.id]);
-
-  const checkFavoriteStatus = async () => {
-    const favorite = await favoritesManager.isFavorite(frequency.id);
-    setIsFavorite(favorite);
-  };
-
-  const toggleFavorite = async () => {
-    if (isFavorite) {
-      await favoritesManager.removeFromFavorites(frequency.id);
-    } else {
-      await favoritesManager.addToFavorites(frequency);
-    }
-    setIsFavorite(!isFavorite);
-  };
-
-  const FrequencyDisplay = ({ children }) => {
-    if (isPlaying) {
-      return (
-        <PulseView pulseScale={1.05} pulseDuration={1000}>
-          {children}
-        </PulseView>
-      );
-    }
-    return children;
-  };
-
-  return (
-    <AnimatedCard style={[styles.largeCard, style]} onPress={onPress}>
-      <LinearGradient
-        colors={gradientColors}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={[
-          styles.largeCardGradient,
-          {
-            borderColor: isPlaying ? categoryColor : theme.colors.outline,
-            borderWidth: isPlaying ? 3 : 1,
-          }
-        ]}
-      >
-        {/* Header */}
-        <View style={styles.largeCardHeader}>
-          <View style={styles.categoryBadge}>
-            <Text style={[styles.categoryBadgeText, { color: categoryColor }]}>
-              {frequency.category}
-            </Text>
-          </View>
           
-          <BouncyButton onPress={toggleFavorite} style={styles.largeFavoriteButton}>
+          <TouchableOpacity
+            style={[styles.favoriteButton, { backgroundColor: theme.colors.surfaceContainer }]}
+            onPress={toggleFavorite}
+            activeOpacity={0.8}
+            delayPressIn={0}
+            delayPressOut={0}
+          >
             <Ionicons
               name={isFavorite ? 'heart' : 'heart-outline'}
-              size={28}
-              color={isFavorite ? '#FF6B6B' : theme.colors.onSurfaceVariant}
+              size={16}
+              color={isFavorite ? theme.colors.primary : theme.colors.onSurfaceVariant}
             />
-          </BouncyButton>
+          </TouchableOpacity>
         </View>
 
-        {/* Main Content */}
-        <View style={styles.largeCardContent}>
+        {/* Frequency Content */}
+        <View style={styles.cardContent}>
+          {/* Frequency Icon/Emoji */}
           <FrequencyDisplay>
-            <Text style={styles.largeFrequencyIcon}>{frequency.image}</Text>
+            <View style={[styles.iconContainer, { backgroundColor: categoryColor + '20' }]}>
+              {frequency.image && frequency.image !== '�' && frequency.image !== '' ? (
+                <Text style={styles.frequencyIcon}>{frequency.image}</Text>
+              ) : (
+                <Ionicons 
+                  name="musical-notes" 
+                  size={32} 
+                  color={categoryColor} 
+                />
+              )}
+            </View>
+          </FrequencyDisplay>
+          
+          <FrequencyDisplay>
+            <View style={styles.frequencySection}>
+              <Text style={[styles.frequencyValue, { color: theme.colors.onSurface }]}>
+                {frequency.frequency}
+              </Text>
+              <Text style={[styles.frequencyUnit, { color: theme.colors.onSurfaceVariant }]}>
+                Hz
+              </Text>
+            </View>
           </FrequencyDisplay>
           
           <Text 
-            style={[
-              styles.largeFrequencyName,
-              { color: theme.colors.onSurface }
-            ]}
+            style={[styles.frequencyName, { color: theme.colors.onSurface }]}
+            numberOfLines={2}
           >
             {frequency.name}
           </Text>
           
-          <FrequencyDisplay>
-            <Text 
-              style={[
-                styles.largeFrequencyValue,
-                { color: categoryColor }
-              ]}
-            >
-              {frequency.frequency}Hz
-            </Text>
-          </FrequencyDisplay>
-          
-          <Text 
-            style={[
-              styles.largeFrequencyDescription,
-              { color: theme.colors.onSurfaceVariant }
-            ]}
-          >
-            {frequency.description}
-          </Text>
-        </View>
-
-        {/* Footer */}
-        <View style={styles.largeCardFooter}>
-          <View 
-            style={[
-              styles.largeDurationBadge,
-              { backgroundColor: categoryColor + '20' }
-            ]}
-          >
-            <Ionicons name="time-outline" size={16} color={categoryColor} />
-            <Text 
-              style={[
-                styles.largeDurationText,
-                { color: categoryColor }
-              ]}
-            >
-              {frequency.duration} minutes
-            </Text>
-          </View>
-          
-          {isPlaying && (
-            <View style={styles.largePlayingIndicator}>
-              <PulseView>
-                <View style={[styles.largePlayingDot, { backgroundColor: categoryColor }]} />
-              </PulseView>
-              <Text style={[styles.largePlayingText, { color: categoryColor }]}>
-                Now Playing
-              </Text>
+          {showCategory && (
+            <View style={styles.categoryContainer}>
+              <View style={[styles.categoryBadge, { backgroundColor: categoryColor + '20' }]}>
+                <Text style={[styles.categoryText, { color: categoryColor }]}>
+                  {frequency.category}
+                </Text>
+              </View>
             </View>
           )}
         </View>
+
+        {/* Play Indicator */}
+        {isPlaying && (
+          <View style={[styles.playIndicator, { backgroundColor: categoryColor }]}>
+            <Ionicons name="play" size={12} color="white" />
+          </View>
+        )}
       </LinearGradient>
-    </AnimatedCard>
+    </TouchableOpacity>
   );
 };
 
 const styles = StyleSheet.create({
-  // Small card styles
-  card: {
-    marginBottom: 16,
+  // Modern Card Styles - Material Design 3
+  modernCard: {
+    // Width and margins controlled by parent
   },
-  cardGradient: {
-    borderRadius: 20,
-    padding: 16,
-    height: 240,
-    display: 'flex',
-    flexDirection: 'column',
-  },
-  mainContent: {
-    flex: 1,
-    display: 'flex',
-    flexDirection: 'column',
-  },
-  favoriteButton: {
-    position: 'absolute',
-    top: 12,
-    right: 12,
-    zIndex: 1,
-    padding: 6,
-    borderRadius: 16,
-    backgroundColor: 'rgba(255, 255, 255, 0.15)',
-  },
-  iconContainer: {
-    alignItems: 'center',
-    marginTop: 8,
-    marginBottom: 8,
-  },
-  frequencyIcon: {
-    fontSize: 36,
-  },
-  infoContainer: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 4,
-    paddingVertical: 4,
-  },
-  frequencyName: {
-    fontSize: 14,
-    fontWeight: '700',
-    textAlign: 'center',
-    marginBottom: 4,
-    lineHeight: 16,
-    minHeight: 16,
-    maxHeight: 32,
-  },
-  frequencyValue: {
-    fontSize: 18,
-    fontWeight: '900',
-    textAlign: 'center',
-    marginBottom: 4,
-    height: 22,
-  },
-  frequencyDescription: {
-    fontSize: 11,
-    textAlign: 'center',
-    lineHeight: 14,
-    marginBottom: 4,
-    minHeight: 14,
-    maxHeight: 28,
-  },
-  bottomSection: {
-    alignItems: 'center',
-    paddingTop: 4,
-  },
-  badgeContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    marginBottom: 8,
-  },
-  durationBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
-  },
-  durationText: {
-    fontSize: 10,
-    fontWeight: '600',
-  },
-  recommendedBadge: {
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 8,
-    marginTop: 4,
-  },
-  recommendedText: {
-    fontSize: 8,
-    fontWeight: '600',
-  },
-  categoryContainer: {
-    alignItems: 'center',
-  },
-  categoryText: {
-    fontSize: 9,
-    textAlign: 'center',
-    opacity: 0.8,
-    fontWeight: '500',
-  },
-  playingIndicator: {
-    position: 'absolute',
-    top: 12,
-    left: 12,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    backgroundColor: 'rgba(0, 0, 0, 0.3)',
-    paddingHorizontal: 6,
-    paddingVertical: 3,
-    borderRadius: 10,
-  },
-  playingDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-  },
-  playingText: {
-    fontSize: 9,
-    fontWeight: '600',
-    color: '#FFFFFF',
-  },
-
-  // Large card styles
-  largeCard: {
-    marginBottom: 20,
-  },
-  largeCardGradient: {
+  cardContainer: {
     borderRadius: 24,
-    padding: 24,
-    minHeight: 300,
+    padding: 20,
+    height: 220,
+    elevation: 3,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.12,
+    shadowRadius: 6,
   },
-  largeCardHeader: {
+  cardHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 20,
+    marginBottom: 16,
+  },
+  categoryIndicator: {
+    width: 4,
+    height: 24,
+    borderRadius: 2,
+  },
+  favoriteButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    justifyContent: 'center',
+    alignItems: 'center',
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+  },
+  cardContent: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 12,
+  },
+  iconContainer: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 12,
+    elevation: 1,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 0.5 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+  },
+  frequencyIcon: {
+    fontSize: 36,
+    textAlign: 'center',
+  },
+  frequencySection: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    marginBottom: 12,
+  },
+  frequencyValue: {
+    fontSize: 32,
+    fontWeight: '700',
+    letterSpacing: 0.25,
+  },
+  frequencyUnit: {
+    fontSize: 18,
+    fontWeight: '500',
+    marginLeft: 3,
+    opacity: 0.8,
+  },
+  frequencyName: {
+    fontSize: 15,
+    fontWeight: '600',
+    textAlign: 'center',
+    marginBottom: 12,
+    lineHeight: 20,
+    letterSpacing: 0.1,
+  },
+  categoryContainer: {
+    alignItems: 'center',
+    marginTop: 6,
   },
   categoryBadge: {
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 16,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    elevation: 1,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 0.5 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
   },
-  categoryBadgeText: {
-    fontSize: 12,
+  categoryText: {
+    fontSize: 11,
     fontWeight: '600',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
-  largeFavoriteButton: {
-    padding: 8,
-  },
-  largeCardContent: {
-    flex: 1,
+  playIndicator: {
+    position: 'absolute',
+    top: 12,
+    left: 12,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  largeFrequencyIcon: {
-    fontSize: 64,
-    marginBottom: 16,
-  },
-  largeFrequencyName: {
-    fontSize: 24,
-    fontWeight: '700',
-    textAlign: 'center',
-    marginBottom: 8,
-  },
-  largeFrequencyValue: {
-    fontSize: 36,
-    fontWeight: '900',
-    textAlign: 'center',
-    marginBottom: 12,
-  },
-  largeFrequencyDescription: {
-    fontSize: 16,
-    textAlign: 'center',
-    lineHeight: 22,
-    opacity: 0.8,
-  },
-  largeCardFooter: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginTop: 20,
-  },
-  largeDurationBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 16,
-  },
-  largeDurationText: {
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  largePlayingIndicator: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  largePlayingDot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-  },
-  largePlayingText: {
-    fontSize: 14,
-    fontWeight: '600',
+    elevation: 3,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3,
   },
 });

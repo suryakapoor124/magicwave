@@ -6,6 +6,7 @@ import * as Device from 'expo-device';
 import * as SplashScreen from 'expo-splash-screen';
 import { AppNavigator } from './src/navigation/AppNavigator';
 import { AudioProvider } from './src/contexts/AudioContext';
+import { CustomSplashScreen } from './src/components/CustomSplashScreen';
 import ThemeProvider, { useTheme } from './src/utils/theme';
 import { settingsManager } from './src/utils/storage';
 import { audioEngine } from './src/utils/audio';
@@ -66,7 +67,11 @@ function Main() {
   }, [isInitialized, fontsLoaded]);
 
   if (!fontsLoaded && !fontError) {
-    return null;
+    return <CustomSplashScreen isDark={isDark} />;
+  }
+
+  if (!isInitialized) {
+    return <CustomSplashScreen isDark={isDark} />;
   }
 
   if (fontError) {
