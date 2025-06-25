@@ -12,7 +12,7 @@
   Real-time generated tones (not pre-recorded) for maximum clarity and precision.
 
 - **Sleep Timer:**  
-  Set the sound to stop automatically after your chosen duration (5–90 min).
+  Set the sound to stop automatically after your chosen duration (5–90 minutes).
 
 - **Clean, Minimalist Design:**  
   Light & dark mode support, smooth animations, and category-based color themes.
@@ -23,13 +23,13 @@
   - Solfeggio Frequencies  
   - Sacred Frequencies (e.g. Hindu mantras)  
   - Focus & Productivity  
-  - And more
+  - And more…
 
 - **Favorites Library:**  
   Save and quickly access your most-used frequencies.
 
 - **Simple Controls:**  
-  Play, pause, volume, and seamless looping — everything designed for ease.
+  Play, pause, and adjust volume — everything designed for ease of use.
 
 ---
 
@@ -49,11 +49,20 @@
 
 ---
 
+## 📝 Feedback & Ideas
+
+Your experience matters!  
+If you have thoughts, ideas for new frequencies, or just want to share your feedback — please take a moment to fill out the quick form. It really helps me make MagicWave better for everyone!
+
+👉 [**Share your feedback here**](https://docs.google.com/forms/d/e/1FAIpQLSfNjBWki6XXiSkFDmzAYZwCUyO4wdinM2DZ76ZtNiTcaL5oEg/viewform?usp=header)
+
+---
+
 ## 💡 Contributing
 
 Contributions are welcome!  
-- Open issues for bugs, features, or suggestions.
-- Submit pull requests if you'd like to help improve MagicWave.
+- Open issues for bugs, features, or suggestions.  
+- Submit pull requests if you’d like to help improve MagicWave.
 
 ---
 
