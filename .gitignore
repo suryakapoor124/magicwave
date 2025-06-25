@@ -3,12 +3,23 @@
 *.apk
 *.aab
 build/
-android/app/build/
-android/build/
-android/.gradle/
+android/
+dist/
 
 # Temporary directories
 magicave-temp/
+*-temp/
+
+# Python virtual environments
+.venv/
+venv/
+__pycache__/
+
+# Build and script files
+build_*.sh
+rebuild.sh
+*_icon.py
+optimize_*.py
 
 # dependencies
 node_modules/
