@@ -43,45 +43,46 @@ export const AboutScreen = ({ navigation }) => {
         }
       }
       
-      // For all platforms, try to open the URL directly first
-      try {
+      // Check if we can open the URL
+      const canOpen = await Linking.canOpenURL(url);
+      console.log(`Can open ${url}: ${canOpen}`);
+      
+      if (canOpen) {
         await Linking.openURL(url);
         console.log(`Successfully opened ${platform} link`);
-        return;
-      } catch (directError) {
-        console.log(`Direct URL failed for ${platform}, trying alternative methods`);
+      } else {
+        // If we can't open the URL directly, try opening with intent on Android
+        if (platform === 'Browser' || platform === 'Buy Me a Coffee' || platform === 'LinkedIn' || platform === 'GitHub' || platform === 'Instagram') {
+          // For web links, try opening with browser intent
+          const browserUrl = `intent://${url.replace('https://', '').replace('http://', '')}#Intent;scheme=https;package=com.android.chrome;end`;
+          try {
+            await Linking.openURL(browserUrl);
+            console.log(`Opened ${platform} with browser intent`);
+            return;
+          } catch (intentError) {
+            console.log('Browser intent failed, trying default browser');
+          }
+        }
+        
+        // If all else fails, show an alert with copy option
+        Alert.alert(
+          `Open ${platform}`,
+          `Unable to open link automatically. Would you like to copy the URL?`,
+          [
+            { 
+              text: 'Copy Link', 
+              onPress: async () => {
+                await Clipboard.setStringAsync(url);
+                Alert.alert('Link Copied', 'The link has been copied to your clipboard. You can paste it in your browser.');
+              }
+            },
+            { text: 'Cancel', style: 'cancel' }
+          ]
+        );
       }
-      
-      // If direct URL fails, try Android browser intent
-      try {
-        const cleanUrl = url.replace('https://', '').replace('http://', '');
-        const browserIntent = `intent://${cleanUrl}#Intent;scheme=https;action=android.intent.action.VIEW;category=android.intent.category.BROWSABLE;end`;
-        await Linking.openURL(browserIntent);
-        console.log(`Opened ${platform} with browser intent`);
-        return;
-      } catch (intentError) {
-        console.log(`Browser intent failed for ${platform}`);
-      }
-      
-      // If all methods fail, show copy option
-      Alert.alert(
-        `Open ${platform}`,
-        `Unable to open link automatically. Would you like to copy the URL to open it manually?`,
-        [
-          { 
-            text: 'Copy Link', 
-            onPress: async () => {
-              await Clipboard.setStringAsync(url);
-              Alert.alert('Link Copied', 'The link has been copied to your clipboard. You can paste it in your browser.');
-            }
-          },
-          { text: 'Cancel', style: 'cancel' }
-        ]
-      );
-      
     } catch (error) {
       console.error(`Error opening ${platform} link:`, error);
-      // Final fallback - copy option
+      // Show copy option as fallback
       Alert.alert(
         'Link Error',
         `Unable to open link. Would you like to copy the URL?`,
