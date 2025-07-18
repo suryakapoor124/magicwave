@@ -33,13 +33,6 @@
 
 ---
 
-## 📥 Download
-
-👉 [**Download MagicWave.apk**](https://www.transfernow.net/en/bld?utm_source=202506262w1HtraJ)
-
-
----
-
 ## 🚀 How to Install
 
 1. Download the APK using the link above.
