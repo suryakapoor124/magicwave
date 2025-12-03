@@ -19,50 +19,41 @@ import { useAudioContext } from '../contexts/AudioContext';
 import { frequencyCategories, popularFrequencies } from '../data/frequencies';
 import { FrequencyCard } from '../components/FrequencyCard';
 import { AnimatedCard, BouncyButton, PulseView, LoadingSpinner } from '../components/Animated';
-import { HeadphonePopup } from '../components/HeadphonePopup';
 import { MeditationLogo } from '../components/MeditationLogo';
 import { favoritesManager, settingsManager } from '../utils/storage';
 import { audioEngine, AudioUtils } from '../utils/audio';
 
 const { width, height } = Dimensions.get('window');
 
-export const HomeScreen = ({ navigation }) => {
+export const HomeScreen = ({ navigation, route }) => {
   const { theme, isDark, toggleTheme } = useTheme();
   const { playFrequency, currentFrequency, isPlaying } = useAudioContext();
-  const [selectedCategory, setSelectedCategory] = useState('All');
   const [frequencies, setFrequencies] = useState([]);
-  const [showHeadphonePopup, setShowHeadphonePopup] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [currentlyPlaying, setCurrentlyPlaying] = useState(null);
   const scrollViewRef = useRef(null);
 
-  const categories = ['All', ...Object.keys(frequencyCategories)];
+  // Handle category selection from other tabs if needed
+  const selectedCategoryParam = route.params?.selectedCategory;
 
   useEffect(() => {
     initializeApp();
   }, []);
 
   useEffect(() => {
-    loadFrequencies();
-  }, [selectedCategory]);
+    if (selectedCategoryParam) {
+      loadFrequencies(selectedCategoryParam);
+    } else {
+      loadFrequencies('All');
+    }
+  }, [selectedCategoryParam]);
 
   const initializeApp = async () => {
     setIsLoading(true);
-    
     try {
-      // Initialize storage managers
       await favoritesManager.initialize();
       await settingsManager.initialize();
-      
-      // Check if we should show headphone popup
-      const showHeadphoneWarning = await settingsManager.getSetting('showHeadphoneWarning');
-      if (showHeadphoneWarning !== false) {
-        setShowHeadphonePopup(true);
-      }
-      
-      // Load initial frequencies
-      await loadFrequencies();
+      await loadFrequencies('All');
     } catch (error) {
       console.error('Error initializing app:', error);
     } finally {
@@ -70,248 +61,128 @@ export const HomeScreen = ({ navigation }) => {
     }
   };
 
-  const loadFrequencies = async () => {
+  const loadFrequencies = async (category) => {
     try {
       let freqList = [];
-      
-      if (selectedCategory === 'All') {
-        // Load all frequencies from all categories
-        Object.entries(frequencyCategories).forEach(([categoryName, categoryData]) => {
-          categoryData.frequencies.forEach(freq => {
-            freqList.push({ ...freq, category: categoryName });
-          });
-        });
-        
-        // Add popular frequencies at the top
+      if (category === 'All' || !category) {
+        // Load popular and random mix for Home
         const popularWithCategory = popularFrequencies.map(freq => ({
           ...freq,
           isPopular: true,
         }));
         
-        freqList = [...popularWithCategory, ...freqList];
+        // Get some random ones for "Surprise Me"
+        const allFreqs = [];
+        Object.entries(frequencyCategories).forEach(([catName, catData]) => {
+          catData.frequencies.forEach(freq => {
+            allFreqs.push({ ...freq, category: catName });
+          });
+        });
+        
+        // Shuffle for variety
+        const shuffled = allFreqs.sort(() => 0.5 - Math.random()).slice(0, 10);
+        freqList = [...popularWithCategory, ...shuffled];
       } else {
-        // Load frequencies from selected category
-        const categoryData = frequencyCategories[selectedCategory];
+        const categoryData = frequencyCategories[category];
         if (categoryData) {
           freqList = categoryData.frequencies.map(freq => ({
             ...freq,
-            category: selectedCategory,
+            category: category,
           }));
         }
       }
-      
       setFrequencies(freqList);
     } catch (error) {
       console.error('Error loading frequencies:', error);
     }
   };
 
-  const handleCategorySelect = (category) => {
-    setSelectedCategory(category);
-    
-    // Scroll to top when category changes
-    if (scrollViewRef.current) {
-      scrollViewRef.current.scrollTo({ y: 0, animated: true });
-    }
-  };
-
   const handleFrequencyPress = (frequency) => {
-    // Non-blocking frequency play for instant UI response
     playFrequency(frequency);
-    
-    // Add to recent in background (non-blocking)
     favoritesManager.addToRecent(frequency).catch(() => {});
   };
 
   const handleRefresh = async () => {
     setRefreshing(true);
-    await loadFrequencies();
+    await loadFrequencies(selectedCategoryParam || 'All');
     setRefreshing(false);
   };
 
-  const navigateToFavorites = () => {
-    navigation.navigate('Favorites');
-  };
-
-  const navigateToSettings = () => {
-    navigation.navigate('Settings');
-  };
-
-  const navigateToSearch = () => {
-    navigation.navigate('Search');
-  };
-
-  const renderHeader = () => {
-    return (
-      <View style={[styles.header, { backgroundColor: theme.colors.surface }]}>
-        {/* Modern Top Bar */}
-        <View style={styles.topBar}>
-          <View style={styles.brandSection}>
-            <View style={styles.logoContainer}>
-              <Image
-                source={require('../../assets/magicwave.jpg')}
-                style={styles.logoImage}
-                resizeMode="cover"
-              />
-            </View>
-            <View style={styles.brandContent}>
-              <Text style={[styles.appTitle, { color: theme.colors.onSurface }]}>
-                MagicWave
-              </Text>
-              <Text style={[styles.appSubtitle, { color: theme.colors.onSurfaceVariant }]}>
-                Frequency Therapy
-              </Text>
-            </View>
-          </View>
-          
-          <View style={styles.headerActions}>
-            <TouchableOpacity 
-              onPress={toggleTheme}
-              style={[styles.actionButton, { backgroundColor: theme.colors.surfaceContainer }]}
-            >
-              <Ionicons 
-                name={isDark ? 'sunny' : 'moon'} 
-                size={20} 
-                color={theme.colors.onSurface} 
-              />
-            </TouchableOpacity>
-            
-            <TouchableOpacity 
-              onPress={() => navigation.navigate('About')}
-              style={[styles.actionButton, { backgroundColor: theme.colors.surfaceContainer }]}
-            >
-              <Ionicons name="person-circle-outline" size={20} color={theme.colors.onSurface} />
-            </TouchableOpacity>
-          </View>
+  const renderHeader = () => (
+    <View style={styles.header}>
+      <View style={styles.topBar}>
+        <View>
+          <Text style={[styles.greeting, { color: theme.colors.onSurfaceVariant }]}>
+            Welcome back,
+          </Text>
+          <Text style={[styles.appTitle, { color: theme.colors.onSurface }]}>
+            MagicWave
+          </Text>
         </View>
-
-        {/* Professional Quick Access Grid */}
-        <View style={styles.quickAccessGrid}>
-          <TouchableOpacity 
-            style={[styles.quickAccessCard, { backgroundColor: theme.colors.surfaceContainer }]}
-            onPress={() => navigation.navigate('Favorites')}
-          >
-            <LinearGradient
-              colors={[theme.colors.primary + '20', theme.colors.primary + '10']}
-              style={styles.quickIconContainer}
-            >
-              <Ionicons name="heart" size={16} color={theme.colors.primary} />
-            </LinearGradient>
-            <Text style={[styles.quickAccessText, { color: theme.colors.onSurface }]}>
-              Favorites
-            </Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity 
-            style={[styles.quickAccessCard, { backgroundColor: theme.colors.surfaceContainer }]}
-            onPress={() => setSelectedCategory('Chill Vibes Only')}
-          >
-            <LinearGradient
-              colors={[theme.colors.secondary + '20', theme.colors.secondary + '10']}
-              style={styles.quickIconContainer}
-            >
-              <Text style={styles.quickAccessEmoji}>🌊</Text>
-            </LinearGradient>
-            <Text style={[styles.quickAccessText, { color: theme.colors.onSurface }]}>
-              Chill
-            </Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity 
-            style={[styles.quickAccessCard, { backgroundColor: theme.colors.surfaceContainer }]}
-            onPress={() => setSelectedCategory('Deep Sleep Ops')}
-          >
-            <LinearGradient
-              colors={[theme.colors.tertiary + '20', theme.colors.tertiary + '10']}
-              style={styles.quickIconContainer}
-            >
-              <Text style={styles.quickAccessEmoji}>🌙</Text>
-            </LinearGradient>
-            <Text style={[styles.quickAccessText, { color: theme.colors.onSurface }]}>
-              Sleep
-            </Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity 
-            style={[styles.quickAccessCard, { backgroundColor: theme.colors.surfaceContainer }]}
-            onPress={() => setSelectedCategory('Brain Gym')}
-          >
-            <LinearGradient
-              colors={[theme.colors.accent + '20', theme.colors.accent + '10']}
-              style={styles.quickIconContainer}
-            >
-              <Text style={styles.quickAccessEmoji}>🧠</Text>
-            </LinearGradient>
-            <Text style={[styles.quickAccessText, { color: theme.colors.onSurface }]}>
-              Focus
-            </Text>
-          </TouchableOpacity>
-        </View>
+        <TouchableOpacity 
+          onPress={toggleTheme}
+          style={[styles.themeButton, { backgroundColor: theme.colors.surfaceContainerHigh }]}
+        >
+          <Ionicons 
+            name={isDark ? 'sunny' : 'moon'} 
+            size={20} 
+            color={theme.colors.primary} 
+          />
+        </TouchableOpacity>
       </View>
-    );
-  };
+    </View>
+  );
 
-  const renderCategoryTabs = () => (
-    <View style={[styles.categorySection, { backgroundColor: theme.colors.surface }]}>
-      <Text style={[styles.sectionTitle, { color: theme.colors.onSurface }]}>
-        Browse Categories
-      </Text>
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.categoryScroll}
+  const renderDidYouKnow = () => (
+    <View style={styles.factContainer}>
+      <LinearGradient
+        colors={[theme.colors.primary, theme.colors.secondary]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={styles.factCard}
       >
-        {categories.map((category, index) => {
-          const isSelected = selectedCategory === category;
-          const categoryColor = category === 'All' 
-            ? theme.colors.primary 
-            : getCategoryColor(category, isDark);
-          
-          return (
-            <TouchableOpacity
-              key={category}
-              onPress={() => handleCategorySelect(category)}
-              style={[
-                styles.modernCategoryChip,
-                {
-                  backgroundColor: isSelected 
-                    ? categoryColor 
-                    : theme.colors.surfaceContainer,
-                  borderColor: isSelected ? categoryColor : 'transparent',
-                  borderWidth: 1,
-                }
-              ]}
-              activeOpacity={0.8}
-            >
-              <Text
-                style={[
-                  styles.categoryChipText,
-                  {
-                    color: isSelected 
-                      ? 'white' 
-                      : theme.colors.onSurface,
-                    fontWeight: isSelected ? '600' : '500',
-                  }
-                ]}
-              >
-                {category}
-              </Text>
-            </TouchableOpacity>
-          );
-        })}
+        <View style={styles.factHeader}>
+          <Ionicons name="bulb" size={24} color="white" />
+          <Text style={styles.factLabel}>Did You Know?</Text>
+        </View>
+        <Text style={styles.factText}>
+          Listening to specific frequencies can influence your emotional state by up to 40%, helping to reduce anxiety and improve focus naturally.
+        </Text>
+      </LinearGradient>
+    </View>
+  );
+
+  const renderSurpriseMe = () => (
+    <View style={styles.section}>
+      <Text style={[styles.sectionTitle, { color: theme.colors.onSurface }]}>
+        Daily Mix
+      </Text>
+      <ScrollView 
+        horizontal 
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.horizontalScroll}
+      >
+        {frequencies.slice(0, 5).map((freq, index) => (
+          <FrequencyCard
+            key={`surprise-${freq.id}`}
+            frequency={freq}
+            onPress={handleFrequencyPress}
+            isPlaying={currentFrequency?.id === freq.id && isPlaying}
+            style={styles.horizontalCard}
+            showCategory={false}
+          />
+        ))}
       </ScrollView>
     </View>
   );
 
-  const renderCurrentlyPlaying = () => {
-    // Removed - using bottom playback bar instead
-    return null;
-  };
-
   const renderFrequencyGrid = () => (
-    <View style={styles.contentSection}>
+    <View style={styles.section}>
+      <Text style={[styles.sectionTitle, { color: theme.colors.onSurface }]}>
+        Trending Now
+      </Text>
       <View style={styles.frequenciesGrid}>
-        {frequencies.map((frequency, index) => (
+        {frequencies.slice(5).map((frequency, index) => (
           <FrequencyCard
             key={`${frequency.id}-${frequency.category}`}
             frequency={frequency}
@@ -325,71 +196,30 @@ export const HomeScreen = ({ navigation }) => {
     </View>
   );
 
-  const renderEmptyState = () => (
-    <AnimatedCard style={styles.emptyState}>
-      <Text style={styles.emptyIcon}>🎵</Text>
-      <Text style={[styles.emptyTitle, { color: theme.colors.onSurface }]}>
-        No frequencies found
-      </Text>
-      <Text style={[styles.emptySubtitle, { color: theme.colors.onSurfaceVariant }]}>
-        Try selecting a different category
-      </Text>
-    </AnimatedCard>
-  );
-
   if (isLoading) {
     return (
       <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
-        <StatusBar 
-          barStyle={isDark ? 'light-content' : 'dark-content'} 
-          backgroundColor={theme.colors.background} 
-        />
-        <View style={styles.loadingContainer}>
-          <LoadingSpinner size="large" color={theme.colors.primary} />
-          <Text style={[styles.loadingText, { color: theme.colors.onSurface }]}>
-            Loading MagicWave...
-          </Text>
-        </View>
+        <LoadingSpinner size="large" color={theme.colors.primary} />
       </SafeAreaView>
     );
   }
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
-      <StatusBar 
-        barStyle={isDark ? 'light-content' : 'dark-content'} 
-        backgroundColor={theme.colors.background} 
-      />
-      
-      {/* Extra padding for status bar */}
-      <View style={styles.statusBarSpacer} />
-      
+      <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} />
       <ScrollView
         ref={scrollViewRef}
-        style={styles.scrollView}
-        contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
         refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={handleRefresh}
-            tintColor={theme.colors.primary}
-            colors={[theme.colors.primary]}
-          />
+          <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={theme.colors.primary} />
         }
+        contentContainerStyle={styles.scrollContent}
       >
         {renderHeader()}
-        {renderCategoryTabs()}
-        {renderCurrentlyPlaying()}
-        
-        {frequencies.length > 0 ? renderFrequencyGrid() : renderEmptyState()}
+        {renderDidYouKnow()}
+        {renderSurpriseMe()}
+        {renderFrequencyGrid()}
       </ScrollView>
-      
-      <HeadphonePopup
-        visible={showHeadphonePopup}
-        onClose={() => setShowHeadphonePopup(false)}
-        onContinue={() => setShowHeadphonePopup(false)}
-      />
     </SafeAreaView>
   );
 };
@@ -524,7 +354,6 @@ const styles = StyleSheet.create({
   
   // Category Section
   categorySection: {
-    paddingHorizontal: 20,
     paddingVertical: 16,
     elevation: 1,
     shadowColor: '#000',
@@ -532,26 +361,37 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 2,
   },
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    marginBottom: 16,
+  },
   sectionTitle: {
     fontSize: 20,
     fontWeight: '600',
-    marginBottom: 16,
     letterSpacing: 0.15,
   },
   categoryScroll: {
-    paddingHorizontal: 4,
+    paddingHorizontal: 16,
     gap: 8,
   },
+  categoryButtonWrapper: {
+    marginRight: 4,
+  },
   modernCategoryChip: {
-    paddingHorizontal: 20,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
     paddingVertical: 12,
-    borderRadius: 20,
-    marginHorizontal: 4,
+    borderRadius: 16,
     elevation: 1,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 0.5 },
     shadowOpacity: 0.1,
     shadowRadius: 2,
+    minHeight: 48,
   },
   categoryChipText: {
     fontSize: 14,
@@ -599,5 +439,65 @@ const styles = StyleSheet.create({
     opacity: 0.8,
     lineHeight: 24,
     letterSpacing: 0.1,
+  },
+  // New Styles
+  greeting: {
+    fontSize: 14,
+    fontWeight: '500',
+    marginBottom: 4,
+  },
+  themeButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  factContainer: {
+    paddingHorizontal: 20,
+    marginBottom: 24,
+  },
+  factCard: {
+    padding: 20,
+    borderRadius: 24,
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+  },
+  factHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  factLabel: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '700',
+    marginLeft: 8,
+  },
+  factText: {
+    color: 'white',
+    fontSize: 16,
+    lineHeight: 24,
+    fontWeight: '500',
+    opacity: 0.95,
+  },
+  section: {
+    marginBottom: 24,
+  },
+  sectionTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    marginBottom: 16,
+    paddingHorizontal: 20,
+  },
+  horizontalScroll: {
+    paddingHorizontal: 16,
+    gap: 16,
+  },
+  horizontalCard: {
+    width: width * 0.7,
   },
 });

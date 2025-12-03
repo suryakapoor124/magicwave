@@ -6,7 +6,7 @@
     "orientation": "portrait",
     "icon": "./assets/magicwave.jpg",
     "userInterfaceStyle": "automatic",
-    "newArchEnabled": true,
+    "newArchEnabled": false,
     "splash": {
       "image": "./assets/magicwave.jpg",
       "resizeMode": "cover",

@@ -90,33 +90,33 @@ export const getCategoryColor = (category, isDark) => {
   return isDark ? darkTheme.colors.primary : lightTheme.colors.primary;
 };
 
-// Modern Minimalistic Theme System with Warm Accents
+// Cosmic / Cyberpunk Theme System
 export const lightTheme = {
   colors: {
-    primary: '#6366F1', // Modern Indigo
+    primary: '#6246EA', // Electric Indigo
     onPrimary: '#FFFFFF',
     primaryContainer: '#E0E7FF',
     onPrimaryContainer: '#312E81',
     
-    secondary: '#F59E0B', // Warm Amber
+    secondary: '#00B4D8', // Cyan
     onSecondary: '#FFFFFF',
-    secondaryContainer: '#FEF3C7',
-    onSecondaryContainer: '#92400E',
+    secondaryContainer: '#CAF0F8',
+    onSecondaryContainer: '#0077B6',
     
-    tertiary: '#EA580C', // Warm Orange
+    tertiary: '#F72585', // Neon Pink
     onTertiary: '#FFFFFF',
-    tertiaryContainer: '#FED7AA',
-    onTertiaryContainer: '#9A3412',
+    tertiaryContainer: '#FCE7F3',
+    onTertiaryContainer: '#9D174D',
     
     error: '#EF4444',
     onError: '#FFFFFF',
     errorContainer: '#FEE2E2',
     onErrorContainer: '#991B1B',
     
-    background: '#FAFAFA',
-    onBackground: '#1F2937',
+    background: '#F8FAFC',
+    onBackground: '#0F172A',
     surface: '#FFFFFF',
-    onSurface: '#1F2937',
+    onSurface: '#0F172A',
     surfaceVariant: '#F1F5F9',
     onSurfaceVariant: '#64748B',
     
@@ -124,74 +124,70 @@ export const lightTheme = {
     outlineVariant: '#F1F5F9',
     shadow: '#000000',
     scrim: '#000000',
-    inverseSurface: '#1E293B',
+    inverseSurface: '#0F172A',
     inverseOnSurface: '#F8FAFC',
     inversePrimary: '#818CF8',
     
-    // Modern surfaces
-    surfaceContainer: '#F8FAFC',
-    surfaceContainerHigh: '#F1F5F9',
-    surfaceContainerHighest: '#E2E8F0',
+    surfaceContainer: '#FFFFFF',
+    surfaceContainerHigh: '#F8FAFC',
+    surfaceContainerHighest: '#F1F5F9',
     
-    // Accent colors
-    accent: '#D97706', // Warm amber accent
+    accent: '#7209B7', // Deep Purple
     onAccent: '#FFFFFF',
     warning: '#F59E0B',
     onWarning: '#FFFFFF',
-    golden: '#F59E0B', // Golden highlights
-    onGolden: '#FFFFFF',
+    golden: '#FFD60A',
+    onGolden: '#000000',
   }
 };
 
 export const darkTheme = {
   colors: {
-    primary: '#818CF8', // Lighter Indigo for dark mode
-    onPrimary: '#1E1B4B',
-    primaryContainer: '#312E81',
+    primary: '#7F5AF0', // Neon Purple
+    onPrimary: '#FFFFFF',
+    primaryContainer: '#242649',
     onPrimaryContainer: '#E0E7FF',
     
-    secondary: '#FBBF24', // Warm Amber for dark mode
-    onSecondary: '#451A03',
-    secondaryContainer: '#92400E',
-    onSecondaryContainer: '#FEF3C7',
+    secondary: '#2CB67D', // Neon Green
+    onSecondary: '#000000',
+    secondaryContainer: '#132A23',
+    onSecondaryContainer: '#D1FAE5',
     
-    tertiary: '#FB923C', // Warm Orange for dark mode
-    onTertiary: '#431407',
-    tertiaryContainer: '#9A3412',
-    onTertiaryContainer: '#FED7AA',
+    tertiary: '#F72585', // Neon Pink
+    onTertiary: '#FFFFFF',
+    tertiaryContainer: '#381E2C',
+    onTertiaryContainer: '#FCE7F3',
     
-    error: '#F87171',
-    onError: '#7F1D1D',
-    errorContainer: '#991B1B',
+    error: '#EF4565',
+    onError: '#FFFFFF',
+    errorContainer: '#3E1F25',
     onErrorContainer: '#FECACA',
     
-    background: '#0F172A',
-    onBackground: '#F8FAFC',
-    surface: '#1E293B',
-    onSurface: '#F8FAFC',
-    surfaceVariant: '#334155',
-    onSurfaceVariant: '#CBD5E1',
+    background: '#050511', // Deep Space Black
+    onBackground: '#FFFFFE',
+    surface: '#16161A', // Dark Gunmetal
+    onSurface: '#FFFFFE',
+    surfaceVariant: '#242629',
+    onSurfaceVariant: '#94A1B2',
     
-    outline: '#475569',
-    outlineVariant: '#334155',
+    outline: '#242629',
+    outlineVariant: '#16161A',
     shadow: '#000000',
     scrim: '#000000',
-    inverseSurface: '#F8FAFC',
-    inverseOnSurface: '#1E293B',
-    inversePrimary: '#6366F1',
+    inverseSurface: '#FFFFFE',
+    inverseOnSurface: '#16161A',
+    inversePrimary: '#6246EA',
     
-    // Dark surfaces
-    surfaceContainer: '#334155',
-    surfaceContainerHigh: '#475569',
-    surfaceContainerHighest: '#64748B',
+    surfaceContainer: '#16161A',
+    surfaceContainerHigh: '#242629',
+    surfaceContainerHighest: '#2F3136',
     
-    // Accent colors for dark mode
-    accent: '#FBBF24', // Warm amber accent for dark mode
-    onAccent: '#451A03',
-    warning: '#FBBF24',
-    onWarning: '#78350F',
-    golden: '#FBBF24', // Golden highlights for dark mode
-    onGolden: '#451A03',
+    accent: '#3A0CA3', // Deep Blue/Purple
+    onAccent: '#FFFFFF',
+    warning: '#FF8906', // Neon Orange
+    onWarning: '#000000',
+    golden: '#FFD60A', // Bright Yellow
+    onGolden: '#000000',
   }
 };
 

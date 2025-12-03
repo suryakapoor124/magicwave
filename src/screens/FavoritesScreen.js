@@ -11,6 +11,7 @@ import {
   Alert,
   Share,
 } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { PanGestureHandler, State } from 'react-native-gesture-handler';
 import Animated, {
   useSharedValue,
@@ -182,38 +183,45 @@ export const FavoritesScreen = ({ navigation }) => {
   };
 
   const renderHeader = () => (
-    <View style={styles.header}>
-      <View style={styles.headerTop}>
-        <BouncyButton onPress={() => navigation.goBack()} style={styles.backButton}>
-          <Ionicons name="arrow-back" size={24} color={theme.colors.onSurface} />
-        </BouncyButton>
-        
-        <Text style={[styles.headerTitle, { color: theme.colors.onSurface }]}>
-          Favorites
-        </Text>
-        
-        <View style={styles.headerButtons}>
-          <TouchableOpacity 
-            onPress={toggleTheme}
-            style={[styles.headerButton, { backgroundColor: theme.colors.surfaceVariant }]}
-          >
-            <Ionicons 
-              name={isDark ? 'sunny-outline' : 'moon-outline'} 
-              size={22} 
-              color={theme.colors.onSurface} 
-            />
-          </TouchableOpacity>
-          
-          <BouncyButton onPress={handleExportFavorites} style={styles.exportButton}>
-            <Ionicons name="share-outline" size={24} color={theme.colors.onSurface} />
+    <LinearGradient
+      colors={[theme.colors.primary + '15', theme.colors.background]}
+      start={{ x: 0, y: 0 }}
+      end={{ x: 0, y: 1 }}
+      style={styles.headerGradient}
+    >
+      <View style={styles.header}>
+        <View style={styles.headerTop}>
+          <BouncyButton onPress={() => navigation.goBack()} style={styles.backButton}>
+            <Ionicons name="arrow-back" size={24} color={theme.colors.onSurface} />
           </BouncyButton>
+          
+          <Text style={[styles.headerTitle, { color: theme.colors.onSurface }]}>
+            Favorites
+          </Text>
+          
+          <View style={styles.headerButtons}>
+            <TouchableOpacity 
+              onPress={toggleTheme}
+              style={[styles.headerButton, { backgroundColor: theme.colors.surfaceContainerHigh }]}
+            >
+              <Ionicons 
+                name={isDark ? 'sunny-outline' : 'moon-outline'} 
+                size={22} 
+                color={theme.colors.onSurface} 
+              />
+            </TouchableOpacity>
+            
+            <BouncyButton onPress={handleExportFavorites} style={styles.exportButton}>
+              <Ionicons name="share-outline" size={24} color={theme.colors.onSurface} />
+            </BouncyButton>
+          </View>
         </View>
+        
+        <Text style={[styles.headerSubtitle, { color: theme.colors.onSurfaceVariant }]}>
+          Your saved frequencies and recent plays
+        </Text>
       </View>
-      
-      <Text style={[styles.headerSubtitle, { color: theme.colors.onSurfaceVariant }]}>
-        Your saved frequencies and recent plays
-      </Text>
-    </View>
+    </LinearGradient>
   );
 
   const renderTabs = () => (
@@ -227,38 +235,44 @@ export const FavoritesScreen = ({ navigation }) => {
           { id: 'favorites', label: 'Favorites', icon: 'heart' },
           { id: 'recent', label: 'Recent', icon: 'time' },
           { id: 'stats', label: 'Stats', icon: 'analytics' },
-        ].map((tab) => (
-          <BouncyButton
-            key={tab.id}
-            onPress={() => setActiveTab(tab.id)}
-            style={[
-              styles.tab,
-              {
-                backgroundColor: activeTab === tab.id 
-                  ? theme.colors.primary 
-                  : theme.colors.surfaceVariant,
-              }
-            ]}
-          >
-            <Ionicons
-              name={tab.icon}
-              size={20}
-              color={activeTab === tab.id ? 'white' : theme.colors.onSurfaceVariant}
-            />
-            <Text
-              style={[
-                styles.tabText,
-                {
-                  color: activeTab === tab.id 
-                    ? 'white' 
-                    : theme.colors.onSurfaceVariant,
-                }
-              ]}
+        ].map((tab) => {
+          const isActive = activeTab === tab.id;
+          return (
+            <TouchableOpacity
+              key={tab.id}
+              onPress={() => setActiveTab(tab.id)}
             >
-              {tab.label}
-            </Text>
-          </BouncyButton>
-        ))}
+              {isActive ? (
+                <LinearGradient
+                  colors={[theme.colors.primary, theme.colors.secondary]}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={styles.tab}
+                >
+                  <Ionicons
+                    name={tab.icon}
+                    size={20}
+                    color="white"
+                  />
+                  <Text style={[styles.tabText, { color: 'white' }]}>
+                    {tab.label}
+                  </Text>
+                </LinearGradient>
+              ) : (
+                <View style={[styles.tab, { backgroundColor: theme.colors.surfaceContainerHigh }]}>
+                  <Ionicons
+                    name={tab.icon}
+                    size={20}
+                    color={theme.colors.onSurfaceVariant}
+                  />
+                  <Text style={[styles.tabText, { color: theme.colors.onSurfaceVariant }]}>
+                    {tab.label}
+                  </Text>
+                </View>
+              )}
+            </TouchableOpacity>
+          );
+        })}
       </ScrollView>
     </View>
   );
@@ -396,50 +410,67 @@ export const FavoritesScreen = ({ navigation }) => {
   const renderStatsTab = () => (
     <View style={styles.tabContent}>
       <Text style={[styles.sectionTitle, { color: theme.colors.onSurface }]}>
-        📊 Your Statistics
+        📊 Your Journey
       </Text>
       
       {stats && (
         <View style={styles.statsContainer}>
-          <AnimatedCard style={[styles.statCard, { backgroundColor: theme.colors.surfaceVariant }]}>
-            <Text style={styles.statIcon}>🎯</Text>
-            <Text style={[styles.statValue, { color: theme.colors.onSurface }]}>
-              {stats.favoritesCount}
-            </Text>
-            <Text style={[styles.statLabel, { color: theme.colors.onSurfaceVariant }]}>
-              Favorites
-            </Text>
-          </AnimatedCard>
-          
-          <AnimatedCard style={[styles.statCard, { backgroundColor: theme.colors.surfaceVariant }]}>
-            <Text style={styles.statIcon}>⏱️</Text>
-            <Text style={[styles.statValue, { color: theme.colors.onSurface }]}>
-              {stats.totalPlayTimeMinutes}m
-            </Text>
-            <Text style={[styles.statLabel, { color: theme.colors.onSurfaceVariant }]}>
-              Total Time
-            </Text>
-          </AnimatedCard>
-          
-          <AnimatedCard style={[styles.statCard, { backgroundColor: theme.colors.surfaceVariant }]}>
-            <Text style={styles.statIcon}>📅</Text>
-            <Text style={[styles.statValue, { color: theme.colors.onSurface }]}>
-              {stats.recentCount}
-            </Text>
-            <Text style={[styles.statLabel, { color: theme.colors.onSurfaceVariant }]}>
-              Recent Plays
-            </Text>
-          </AnimatedCard>
-          
-          <AnimatedCard style={[styles.statCard, { backgroundColor: theme.colors.surfaceVariant }]}>
-            <Text style={styles.statIcon}>🏷️</Text>
-            <Text style={[styles.statValue, { color: theme.colors.onSurface }]} numberOfLines={1}>
-              {stats.mostPlayedCategory || 'None'}
-            </Text>
-            <Text style={[styles.statLabel, { color: theme.colors.onSurfaceVariant }]}>
-              Top Category
-            </Text>
-          </AnimatedCard>
+          {/* Streak Card - Cheerful & Gamified */}
+          <LinearGradient
+            colors={['#FFD700', '#FFA500']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={[styles.statCard, styles.streakCard]}
+          >
+            <View style={styles.streakContent}>
+              <Text style={styles.streakIcon}>🔥</Text>
+              <View>
+                <Text style={styles.streakValue}>3 Days</Text>
+                <Text style={styles.streakLabel}>Current Streak</Text>
+              </View>
+            </View>
+            <Text style={styles.streakMessage}>You're on fire! Keep it up!</Text>
+          </LinearGradient>
+
+          <View style={styles.statsGrid}>
+            <LinearGradient
+              colors={[theme.colors.primary, theme.colors.primary + '80']}
+              style={styles.miniStatCard}
+            >
+              <Text style={styles.miniStatIcon}>🎯</Text>
+              <Text style={styles.miniStatValue}>{stats.favoritesCount}</Text>
+              <Text style={styles.miniStatLabel}>Favorites</Text>
+            </LinearGradient>
+            
+            <LinearGradient
+              colors={[theme.colors.secondary, theme.colors.secondary + '80']}
+              style={styles.miniStatCard}
+            >
+              <Text style={styles.miniStatIcon}>⏱️</Text>
+              <Text style={styles.miniStatValue}>{stats.totalPlayTimeMinutes}m</Text>
+              <Text style={styles.miniStatLabel}>Total Time</Text>
+            </LinearGradient>
+            
+            <LinearGradient
+              colors={[theme.colors.tertiary, theme.colors.tertiary + '80']}
+              style={styles.miniStatCard}
+            >
+              <Text style={styles.miniStatIcon}>📅</Text>
+              <Text style={styles.miniStatValue}>{stats.recentCount}</Text>
+              <Text style={styles.miniStatLabel}>Plays</Text>
+            </LinearGradient>
+            
+            <LinearGradient
+              colors={[theme.colors.accent, theme.colors.accent + '80']}
+              style={styles.miniStatCard}
+            >
+              <Text style={styles.miniStatIcon}>🏷️</Text>
+              <Text style={styles.miniStatValue} numberOfLines={1}>
+                {stats.mostPlayedCategory ? stats.mostPlayedCategory.split(' ')[0] : '-'}
+              </Text>
+              <Text style={styles.miniStatLabel}>Top Vibe</Text>
+            </LinearGradient>
+          </View>
         </View>
       )}
     </View>
@@ -536,6 +567,11 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     paddingBottom: 150, // Increased for playback bar
+  },
+  headerGradient: {
+    borderBottomLeftRadius: 32,
+    borderBottomRightRadius: 32,
+    marginBottom: 20,
   },
   header: {
     padding: 20,
@@ -691,5 +727,65 @@ const styles = StyleSheet.create({
   statLabel: {
     fontSize: 12,
     textAlign: 'center',
+  },
+  // New Stats Styles
+  streakCard: {
+    width: '100%',
+    flexDirection: 'column',
+    alignItems: 'flex-start',
+    marginBottom: 8,
+  },
+  streakContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  streakIcon: {
+    fontSize: 32,
+    marginRight: 12,
+  },
+  streakValue: {
+    fontSize: 24,
+    fontWeight: '800',
+    color: 'white',
+  },
+  streakLabel: {
+    fontSize: 14,
+    color: 'rgba(255,255,255,0.9)',
+    fontWeight: '600',
+  },
+  streakMessage: {
+    fontSize: 14,
+    color: 'rgba(255,255,255,0.9)',
+    fontStyle: 'italic',
+  },
+  statsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    width: '100%',
+    gap: 12,
+  },
+  miniStatCard: {
+    width: '48%',
+    padding: 16,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  miniStatIcon: {
+    fontSize: 24,
+    marginBottom: 8,
+  },
+  miniStatValue: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: 'white',
+    marginBottom: 4,
+  },
+  miniStatLabel: {
+    fontSize: 12,
+    color: 'rgba(255,255,255,0.9)',
+    fontWeight: '600',
   },
 });

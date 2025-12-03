@@ -42,9 +42,7 @@ export const HeadphonePopup = ({ visible, onClose, onContinue }) => {
     onContinue();
   };
 
-  const gradientColors = isDark
-    ? ['#1F2937', '#374151', '#4B5563']
-    : ['#F9FAFB', '#F3F4F6', '#E5E7EB'];
+  const gradientColors = [theme.colors.surface, theme.colors.surfaceContainer];
 
   if (!visible) return null;
 

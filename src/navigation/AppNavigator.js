@@ -3,9 +3,8 @@ import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator, CardStyleInterpolators, TransitionPresets } from '@react-navigation/stack';
 import { View, StyleSheet, Easing } from 'react-native';
 import { useTheme } from '../utils/theme';
-import { HomeScreen } from '../screens/HomeScreen';
+import { TabNavigator } from './TabNavigator';
 import { PlayerScreen } from '../screens/PlayerScreen';
-import { FavoritesScreen } from '../screens/FavoritesScreen';
 import { AboutScreen } from '../screens/AboutScreen';
 import { SpotifyPlaybackBar } from '../components/SpotifyPlaybackBar';
 
@@ -106,17 +105,12 @@ export const AppNavigator = () => {
         }}
       >
         <Stack.Navigator
-          initialRouteName="Home"
+          initialRouteName="MainTabs"
           screenOptions={screenOptions}
         >
           <Stack.Screen 
-            name="Home" 
-            component={HomeScreen} 
-            options={{ headerShown: false }}
-          />
-          <Stack.Screen 
-            name="Favorites" 
-            component={FavoritesScreen} 
+            name="MainTabs" 
+            component={TabNavigator} 
             options={{ headerShown: false }}
           />
           <Stack.Screen 

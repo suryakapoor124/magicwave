@@ -27,9 +27,9 @@ export const FrequencyCard = ({
   const [isFavorite, setIsFavorite] = useState(false);
   
   const categoryColor = getCategoryColor(frequency.category, isDark);
-  const gradientColors = isDark 
-    ? [categoryColor + '40', categoryColor + '20']
-    : [categoryColor + '30', categoryColor + '10'];
+  const gradientColors = isPlaying 
+    ? [categoryColor + '30', categoryColor + '10']
+    : [theme.colors.surfaceContainer + '90', theme.colors.surfaceContainer + '50'];
 
   useEffect(() => {
     // Fast, non-blocking favorite check
@@ -74,23 +74,20 @@ export const FrequencyCard = ({
       delayPressOut={0}
     >
       <LinearGradient
-        colors={isPlaying ? [categoryColor + '20', categoryColor + '05'] : [theme.colors.surface, theme.colors.surface]}
+        colors={gradientColors}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
         style={[styles.cardContainer, { 
           borderColor: isPlaying ? categoryColor : theme.colors.outline + '20',
-          borderWidth: isPlaying ? 1.5 : 0.5,
+          borderWidth: isPlaying ? 1.5 : 1,
         }]}
       >
         {/* Card Header */}
         <View style={styles.cardHeader}>
-          <LinearGradient
-            colors={[categoryColor, categoryColor + '80']}
-            style={styles.categoryIndicator}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-          />
+          <View style={[styles.categoryDot, { backgroundColor: categoryColor }]} />
           
           <TouchableOpacity
-            style={[styles.favoriteButton, { backgroundColor: theme.colors.surfaceContainer }]}
+            style={[styles.favoriteButton, { backgroundColor: theme.colors.surfaceContainerHigh }]}
             onPress={toggleFavorite}
             activeOpacity={0.8}
             delayPressIn={0}
@@ -108,8 +105,17 @@ export const FrequencyCard = ({
         <View style={styles.cardContent}>
           {/* Frequency Icon/Emoji */}
           <FrequencyDisplay>
-            <View style={[styles.iconContainer, { backgroundColor: categoryColor + '20' }]}>
-              {frequency.image && frequency.image !== '�' && frequency.image !== '' ? (
+            <LinearGradient
+              colors={[categoryColor + '20', categoryColor + '05']}
+              style={[styles.iconContainer, { 
+                borderColor: categoryColor + '40',
+                borderWidth: 1,
+                shadowColor: categoryColor,
+                shadowOpacity: 0.4,
+                shadowRadius: 12,
+              }]}
+            >
+              {frequency.image && frequency.image !== '' ? (
                 <Text style={styles.frequencyIcon}>{frequency.image}</Text>
               ) : (
                 <Ionicons 
@@ -118,7 +124,7 @@ export const FrequencyCard = ({
                   color={categoryColor} 
                 />
               )}
-            </View>
+            </LinearGradient>
           </FrequencyDisplay>
           
           <FrequencyDisplay>
@@ -135,6 +141,7 @@ export const FrequencyCard = ({
           <Text 
             style={[styles.frequencyName, { color: theme.colors.onSurface }]}
             numberOfLines={2}
+            ellipsizeMode="tail"
           >
             {frequency.name}
           </Text>
@@ -168,117 +175,93 @@ const styles = StyleSheet.create({
   },
   cardContainer: {
     borderRadius: 24,
-    padding: 20,
-    height: 220,
-    elevation: 3,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.12,
-    shadowRadius: 6,
+    padding: 16,
+    height: 240,
+    elevation: 0,
   },
   cardHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 16,
+    marginBottom: 8,
   },
-  categoryIndicator: {
-    width: 4,
-    height: 24,
-    borderRadius: 2,
+  categoryDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
   },
   favoriteButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
     justifyContent: 'center',
     alignItems: 'center',
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
   },
   cardContent: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingVertical: 12,
+    paddingVertical: 8,
   },
   iconContainer: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
+    width: 72,
+    height: 72,
+    borderRadius: 36,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 12,
-    elevation: 1,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 0.5 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
+    marginBottom: 16,
   },
   frequencyIcon: {
-    fontSize: 36,
+    fontSize: 40,
     textAlign: 'center',
   },
   frequencySection: {
     flexDirection: 'row',
     alignItems: 'baseline',
-    marginBottom: 12,
+    marginBottom: 8,
   },
   frequencyValue: {
-    fontSize: 32,
+    fontSize: 28,
     fontWeight: '700',
-    letterSpacing: 0.25,
+    letterSpacing: 0.5,
   },
   frequencyUnit: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: '500',
-    marginLeft: 3,
-    opacity: 0.8,
+    marginLeft: 4,
+    opacity: 0.7,
   },
   frequencyName: {
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: '600',
     textAlign: 'center',
     marginBottom: 12,
     lineHeight: 20,
-    letterSpacing: 0.1,
+    letterSpacing: 0.2,
+    height: 40,
   },
   categoryContainer: {
     alignItems: 'center',
-    marginTop: 6,
   },
   categoryBadge: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 16,
-    elevation: 1,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 0.5 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
   },
   categoryText: {
-    fontSize: 11,
-    fontWeight: '600',
+    fontSize: 10,
+    fontWeight: '700',
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
   playIndicator: {
     position: 'absolute',
-    top: 12,
-    left: 12,
-    width: 28,
-    height: 28,
-    borderRadius: 14,
+    top: 16,
+    left: 16,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
-    elevation: 3,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.25,
-    shadowRadius: 3,
   },
 });

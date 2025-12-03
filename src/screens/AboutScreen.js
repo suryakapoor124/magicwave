@@ -164,34 +164,41 @@ export const AboutScreen = ({ navigation }) => {
       <View style={styles.statusBarSpacer} />
       
       {/* Modern Header */}
-      <View style={[styles.header, { backgroundColor: theme.colors.surface }]}>
-        <TouchableOpacity 
-          onPress={() => navigation.goBack()}
-          style={[styles.headerButton, { backgroundColor: theme.colors.surfaceVariant }]}
-        >
-          <Ionicons name="arrow-back" size={24} color={theme.colors.onSurface} />
-        </TouchableOpacity>
-        
-        <View style={styles.headerContent}>
-          <Text style={[styles.headerTitle, { color: theme.colors.onSurface }]}>
-            About
-          </Text>
-          <Text style={[styles.headerSubtitle, { color: theme.colors.onSurfaceVariant }]}>
-            MagicWave v1.0.0
-          </Text>
+      <LinearGradient
+        colors={[theme.colors.primary + '15', theme.colors.background]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 0, y: 1 }}
+        style={styles.headerGradient}
+      >
+        <View style={styles.header}>
+          <TouchableOpacity 
+            onPress={() => navigation.goBack()}
+            style={[styles.headerButton, { backgroundColor: theme.colors.surfaceContainerHigh }]}
+          >
+            <Ionicons name="arrow-back" size={24} color={theme.colors.onSurface} />
+          </TouchableOpacity>
+          
+          <View style={styles.headerContent}>
+            <Text style={[styles.headerTitle, { color: theme.colors.onSurface }]}>
+              About
+            </Text>
+            <Text style={[styles.headerSubtitle, { color: theme.colors.onSurfaceVariant }]}>
+              MagicWave v1.0.0
+            </Text>
+          </View>
+          
+          <TouchableOpacity 
+            onPress={toggleTheme}
+            style={[styles.headerButton, { backgroundColor: theme.colors.surfaceContainerHigh }]}
+          >
+            <Ionicons 
+              name={isDark ? 'sunny' : 'moon'} 
+              size={24} 
+              color={theme.colors.onSurface} 
+            />
+          </TouchableOpacity>
         </View>
-        
-        <TouchableOpacity 
-          onPress={toggleTheme}
-          style={[styles.headerButton, { backgroundColor: theme.colors.surfaceVariant }]}
-        >
-          <Ionicons 
-            name={isDark ? 'sunny' : 'moon'} 
-            size={24} 
-            color={theme.colors.onSurface} 
-          />
-        </TouchableOpacity>
-      </View>
+      </LinearGradient>
 
       <ScrollView 
         style={styles.content} 
@@ -397,16 +404,21 @@ const styles = StyleSheet.create({
   statusBarSpacer: {
     height: 20, // Extra space for status bar
   },
+  headerGradient: {
+    borderBottomLeftRadius: 32,
+    borderBottomRightRadius: 32,
+    marginBottom: 20,
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+  },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 20,
     paddingVertical: 16,
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
   },
   headerButton: {
     width: 44,
