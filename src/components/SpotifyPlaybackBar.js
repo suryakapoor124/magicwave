@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef } from "react";
 import {
   View,
   Text,
@@ -10,16 +10,17 @@ import {
   Modal,
   Platform,
   SafeAreaView,
-} from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
-import { Ionicons } from '@expo/vector-icons';
-import { useTheme } from '../utils/theme';
-import { useAudioContext } from '../contexts/AudioContext';
-import { PulseView } from './Animated';
-import * as Haptics from 'expo-haptics';
-import Slider from '@react-native-community/slider';
+  ScrollView,
+} from "react-native";
+import { LinearGradient } from "expo-linear-gradient";
+import { Ionicons } from "@expo/vector-icons";
+import { useTheme } from "../utils/theme";
+import { useAudioContext } from "../contexts/AudioContext";
+import { PulseView } from "./Animated";
+import * as Haptics from "expo-haptics";
+import Slider from "@react-native-community/slider";
 
-const { width, height } = Dimensions.get('window');
+const { width, height } = Dimensions.get("window");
 
 const AnimatedWaveBar = ({ height, delay, color, isPlaying }) => {
   const anim = useRef(new Animated.Value(1)).current;
@@ -41,7 +42,7 @@ const AnimatedWaveBar = ({ height, delay, color, isPlaying }) => {
             easing: Easing.inOut(Easing.ease),
             useNativeDriver: true,
           }),
-        ])
+        ]),
       ).start();
     } else {
       anim.setValue(1);
@@ -64,19 +65,20 @@ const AnimatedWaveBar = ({ height, delay, color, isPlaying }) => {
 
 export const SpotifyPlaybackBar = () => {
   const { theme, isDark } = useTheme();
-  const { 
-    currentFrequency, 
-    isPlaying, 
-    togglePlayPause, 
-    toggleFavorite, 
+  const {
+    currentFrequency,
+    isPlaying,
+    progress,
+    togglePlayPause,
+    toggleFavorite,
     isFavorite,
     volume,
     setVolumeLevel,
     stopFrequency,
     timer,
-    setTimerDuration 
+    setTimerDuration,
   } = useAudioContext();
-  
+
   const [showFullScreen, setShowFullScreen] = useState(false);
   const [showVolumeControl, setShowVolumeControl] = useState(false);
   const [showTimerModal, setShowTimerModal] = useState(false);
@@ -84,7 +86,7 @@ export const SpotifyPlaybackBar = () => {
   const [timeRemaining, setTimeRemaining] = useState(null);
   const [slideUpAnim] = useState(new Animated.Value(0));
   const [opacityAnim] = useState(new Animated.Value(0));
-  
+
   const timerRef = useRef(null);
 
   useEffect(() => {
@@ -100,23 +102,23 @@ export const SpotifyPlaybackBar = () => {
   useEffect(() => {
     if (timer && isPlaying) {
       const startTime = Date.now();
-      const endTime = startTime + (timer * 60 * 1000);
-      
+      const endTime = startTime + timer * 60 * 1000;
+
       setTimeRemaining(timer * 60);
-      
+
       timerRef.current = setInterval(() => {
         const now = Date.now();
         const remainingMs = endTime - now;
-        
+
         if (remainingMs <= 0) {
           clearInterval(timerRef.current);
-          setTimeRemaining(null);
+          setTimeRemaining(0);
           setTimerDuration(0);
           stopFrequency();
         } else {
-          setTimeRemaining(Math.ceil(remainingMs / 1000));
+          setTimeRemaining(Math.max(0, Math.ceil(remainingMs / 1000)));
         }
-      }, 5000);
+      }, 1000);
     } else {
       if (timerRef.current) {
         clearInterval(timerRef.current);
@@ -169,10 +171,16 @@ export const SpotifyPlaybackBar = () => {
   };
 
   const formatTime = (seconds) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins}:${secs.toString().padStart(2, '0')}`;
+    const safeSeconds = Number.isFinite(seconds) ? seconds : 0;
+    const mins = Math.floor(safeSeconds / 60);
+    const secs = safeSeconds % 60;
+    return `${mins}:${secs.toString().padStart(2, "0")}`;
   };
+
+  const safeTimeRemaining = Number.isFinite(timeRemaining) ? timeRemaining : 0;
+  const timerProgress = timer
+    ? Math.max(0, Math.min(100, (safeTimeRemaining / (timer * 60)) * 100))
+    : 0;
 
   const isFrequencyFavorite = isFavorite(currentFrequency);
 
@@ -184,62 +192,92 @@ export const SpotifyPlaybackBar = () => {
       onRequestClose={() => setShowFullScreen(false)}
     >
       <LinearGradient
-        colors={['#191414', '#121212']} // Spotify Dark Gradient
+        colors={["#191414", "#121212"]} // Spotify Dark Gradient
         style={styles.fullScreenContainer}
       >
         <SafeAreaView style={styles.fullScreenSafeArea}>
           <View style={styles.fsHeader}>
-            <TouchableOpacity 
+            <TouchableOpacity
               onPress={() => setShowFullScreen(false)}
               style={styles.fsHeaderButton}
             >
               <Ionicons name="chevron-down" size={32} color="white" />
             </TouchableOpacity>
-            <Text style={[styles.fsHeaderTitle, { color: 'white' }]}>
+            <Text style={[styles.fsHeaderTitle, { color: "white" }]}>
               NOW PLAYING
             </Text>
-            <TouchableOpacity 
+            <TouchableOpacity
               onPress={() => setShowTimerModal(true)}
               style={styles.fsHeaderButton}
             >
-              <Ionicons name="timer-outline" size={28} color={timer ? "#1DB954" : "white"} />
+              <Ionicons
+                name="timer-outline"
+                size={28}
+                color={timer ? "#1DB954" : "white"}
+              />
             </TouchableOpacity>
           </View>
 
-          <View style={styles.fsContent}>
+          <ScrollView
+            style={styles.fsContent}
+            contentContainerStyle={styles.fsContentInner}
+            showsVerticalScrollIndicator={false}
+          >
             <View style={[styles.fsArtworkContainer, { shadowColor: "#000" }]}>
               <LinearGradient
-                colors={['#282828', '#121212']}
+                colors={["#282828", "#121212"]}
                 style={styles.fsArtwork}
               >
-                <Text style={styles.fsArtworkIcon}>{currentFrequency.image}</Text>
+                <Text style={styles.fsArtworkIcon}>
+                  {currentFrequency.image}
+                </Text>
               </LinearGradient>
             </View>
 
             <View style={styles.fsTrackInfo}>
               <View>
-                <Text style={[styles.fsTitle, { color: 'white' }]}>
+                <Text style={[styles.fsTitle, { color: "white" }]}>
                   {currentFrequency.name}
                 </Text>
-                <Text style={[styles.fsSubtitle, { color: '#B3B3B3' }]}>
+                <Text style={[styles.fsSubtitle, { color: "#B3B3B3" }]}>
                   {currentFrequency.frequency} Hz • {currentFrequency.category}
                 </Text>
               </View>
-              <TouchableOpacity onPress={() => toggleFavorite(currentFrequency)}>
-                <Ionicons 
-                  name={isFrequencyFavorite ? "heart" : "heart-outline"} 
-                  size={32} 
-                  color={isFrequencyFavorite ? "#1DB954" : "white"} 
+              <TouchableOpacity
+                onPress={() => toggleFavorite(currentFrequency)}
+              >
+                <Ionicons
+                  name={isFrequencyFavorite ? "heart" : "heart-outline"}
+                  size={32}
+                  color={isFrequencyFavorite ? "#1DB954" : "white"}
                 />
               </TouchableOpacity>
             </View>
 
-            <View style={[styles.factCard, { backgroundColor: '#282828' }]}>
+            <View
+              style={[
+                styles.factCard,
+                { backgroundColor: theme.colors.surfaceContainer },
+              ]}
+            >
               <View style={styles.factHeader}>
-                <Ionicons name="sparkles" size={16} color="#1DB954" />
-                <Text style={[styles.factLabel, { color: "#1DB954" }]}>DID YOU KNOW?</Text>
+                <Ionicons
+                  name="sparkles"
+                  size={16}
+                  color={theme.colors.primary}
+                />
+                <Text
+                  style={[styles.factLabel, { color: theme.colors.primary }]}
+                >
+                  Did you know
+                </Text>
               </View>
-              <Text style={[styles.factText, { color: '#B3B3B3' }]}>
+              <Text
+                style={[
+                  styles.factText,
+                  { color: theme.colors.onSurfaceVariant },
+                ]}
+              >
                 {currentFrequency.description}
               </Text>
             </View>
@@ -248,23 +286,28 @@ export const SpotifyPlaybackBar = () => {
               {timer ? (
                 <>
                   <View style={styles.fsProgressBar}>
-                    <View style={[styles.fsProgressFill, { 
-                      width: `${(timeRemaining / (timer * 60)) * 100}%`,
-                      backgroundColor: "#1DB954" 
-                    }]} />
+                    <View
+                      style={[
+                        styles.fsProgressFill,
+                        {
+                          width: `${timerProgress}%`,
+                          backgroundColor: "#1DB954",
+                        },
+                      ]}
+                    />
                   </View>
                   <View style={styles.fsTimeLabels}>
-                    <Text style={[styles.fsTimeText, { color: '#B3B3B3' }]}>
-                      {formatTime(timeRemaining)} remaining
+                    <Text style={[styles.fsTimeText, { color: "#B3B3B3" }]}>
+                      {formatTime(safeTimeRemaining)} remaining
                     </Text>
-                    <Text style={[styles.fsTimeText, { color: '#B3B3B3' }]}>
+                    <Text style={[styles.fsTimeText, { color: "#B3B3B3" }]}>
                       {timer} min timer
                     </Text>
                   </View>
                 </>
               ) : (
                 <View style={styles.fsNoTimer}>
-                  <Text style={[styles.fsNoTimerText, { color: '#B3B3B3' }]}>
+                  <Text style={[styles.fsNoTimerText, { color: "#B3B3B3" }]}>
                     Infinite Playback
                   </Text>
                 </View>
@@ -272,30 +315,34 @@ export const SpotifyPlaybackBar = () => {
             </View>
 
             <View style={styles.fsControls}>
-              <TouchableOpacity onPress={() => setVolumeLevel(Math.max(0, volume - 0.1))}>
+              <TouchableOpacity
+                onPress={() => setVolumeLevel(Math.max(0, volume - 0.1))}
+              >
                 <Ionicons name="volume-low" size={28} color="#B3B3B3" />
               </TouchableOpacity>
-              
-              <TouchableOpacity 
+
+              <TouchableOpacity
                 style={[styles.fsPlayButton, { backgroundColor: "white" }]}
                 onPress={togglePlayPause}
               >
-                <Ionicons 
-                  name={isPlaying ? "pause" : "play"} 
-                  size={40} 
-                  color="black" 
+                <Ionicons
+                  name={isPlaying ? "pause" : "play"}
+                  size={40}
+                  color="black"
                   style={{ marginLeft: isPlaying ? 0 : 4 }}
                 />
               </TouchableOpacity>
 
-              <TouchableOpacity onPress={() => setVolumeLevel(Math.min(1, volume + 0.1))}>
+              <TouchableOpacity
+                onPress={() => setVolumeLevel(Math.min(1, volume + 0.1))}
+              >
                 <Ionicons name="volume-high" size={28} color="#B3B3B3" />
               </TouchableOpacity>
             </View>
 
             <View style={styles.fsVolumeContainer}>
               <Slider
-                style={{ width: '100%', height: 40 }}
+                style={{ width: "100%", height: 40 }}
                 minimumValue={0}
                 maximumValue={1}
                 value={volume}
@@ -305,7 +352,7 @@ export const SpotifyPlaybackBar = () => {
                 thumbTintColor="white"
               />
             </View>
-          </View>
+          </ScrollView>
         </SafeAreaView>
       </LinearGradient>
     </Modal>
@@ -315,25 +362,27 @@ export const SpotifyPlaybackBar = () => {
     <View
       style={[
         styles.container,
-        { 
-          backgroundColor: '#191414', // Force dark background
-        }
+        {
+          backgroundColor: "#191414", // Force dark background
+        },
       ]}
     >
-      <TouchableOpacity 
+      <TouchableOpacity
         activeOpacity={0.9}
         onPress={() => setShowFullScreen(true)}
         style={styles.mainContent}
       >
         <View style={styles.leftSection}>
-          <View style={[
-            styles.albumArt, 
-            { 
-              backgroundColor: '#282828',
-              borderColor: 'transparent',
-            }
-          ]}>
-            {currentFrequency.image && currentFrequency.image !== '' ? (
+          <View
+            style={[
+              styles.albumArt,
+              {
+                backgroundColor: "#282828",
+                borderColor: "transparent",
+              },
+            ]}
+          >
+            {currentFrequency.image && currentFrequency.image !== "" ? (
               <Text style={styles.albumIcon}>{currentFrequency.image}</Text>
             ) : (
               <Ionicons name="musical-notes" size={20} color="#1DB954" />
@@ -341,17 +390,11 @@ export const SpotifyPlaybackBar = () => {
           </View>
 
           <View style={styles.trackInfo}>
-            <Text 
-              style={styles.trackTitle}
-              numberOfLines={1}
-            >
+            <Text style={styles.trackTitle} numberOfLines={1}>
               {currentFrequency.name}
             </Text>
             <View style={styles.trackSubtitleContainer}>
-              <Text 
-                style={styles.trackSubtitle}
-                numberOfLines={1}
-              >
+              <Text style={styles.trackSubtitle} numberOfLines={1}>
                 {currentFrequency.frequency}Hz • {currentFrequency.category}
               </Text>
             </View>
@@ -359,47 +402,47 @@ export const SpotifyPlaybackBar = () => {
         </View>
 
         <View style={styles.rightSection}>
-          <TouchableOpacity 
-            style={styles.controlButton} 
+          <TouchableOpacity
+            style={styles.controlButton}
             onPress={handleFavorite}
             activeOpacity={0.7}
           >
-            <Ionicons 
-              name={isFrequencyFavorite ? "heart" : "heart-outline"} 
-              size={24} 
-              color={isFrequencyFavorite ? "#1DB954" : "#B3B3B3"} 
+            <Ionicons
+              name={isFrequencyFavorite ? "heart" : "heart-outline"}
+              size={24}
+              color={isFrequencyFavorite ? "#1DB954" : "#B3B3B3"}
             />
           </TouchableOpacity>
 
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.playButton}
             onPress={handlePlayPause}
             activeOpacity={0.8}
           >
-            <Ionicons 
-              name={isPlaying ? 'pause' : 'play'} 
-              size={28} 
-              color="white" 
+            <Ionicons
+              name={isPlaying ? "pause" : "play"}
+              size={28}
+              color="white"
             />
           </TouchableOpacity>
         </View>
       </TouchableOpacity>
 
-            <View style={styles.progressContainer}>
+      <View style={styles.progressContainer}>
         <LinearGradient
-          colors={['#1DB954', '#1DB954']}
+          colors={["#1DB954", "#1DB954"]}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 0 }}
           style={[
-            styles.progressBar, 
-            { 
-              width: `${(progress || 0)}%`,
-            }
+            styles.progressBar,
+            {
+              width: `${progress || 0}%`,
+            },
           ]}
         />
       </View>
       {renderFullScreenPlayer()}
-      
+
       <Modal
         visible={showTimerModal}
         transparent={true}
@@ -407,39 +450,96 @@ export const SpotifyPlaybackBar = () => {
         onRequestClose={() => setShowTimerModal(false)}
       >
         <View style={styles.modalOverlay}>
-          <View style={[styles.modalContent, { backgroundColor: '#191414' }]}>
+          <View
+            style={[
+              styles.modalContent,
+              { backgroundColor: theme.colors.surface },
+            ]}
+          >
             <View style={styles.modalHeader}>
-              <Text style={[styles.modalTitle, { color: 'white' }]}>
+              <Text
+                style={[styles.modalTitle, { color: theme.colors.onSurface }]}
+              >
                 Sleep Timer
               </Text>
-              <TouchableOpacity 
+              <TouchableOpacity
                 onPress={() => setShowTimerModal(false)}
-                style={[styles.closeButton, { backgroundColor: '#282828' }]}
+                style={[
+                  styles.closeButton,
+                  { backgroundColor: theme.colors.surfaceContainer },
+                ]}
               >
-                <Ionicons name="close" size={20} color="white" />
+                <Ionicons
+                  name="close"
+                  size={20}
+                  color={theme.colors.onSurface}
+                />
               </TouchableOpacity>
             </View>
 
-            <Text style={[styles.modalSubtitle, { color: '#B3B3B3' }]}>
+            <Text
+              style={[
+                styles.modalSubtitle,
+                { color: theme.colors.onSurfaceVariant },
+              ]}
+            >
               Audio will automatically stop after selected time
             </Text>
-            
-            <View style={[styles.sliderContainer, { backgroundColor: '#282828' }]}>
+
+            {timer && timeRemaining !== null && (
+              <View style={styles.timerCountdownRow}>
+                <Ionicons
+                  name="time-outline"
+                  size={16}
+                  color={theme.colors.primary}
+                />
+                <Text
+                  style={[
+                    styles.timerCountdownText,
+                    { color: theme.colors.primary },
+                  ]}
+                >
+                  {formatTime(safeTimeRemaining)} remaining
+                </Text>
+              </View>
+            )}
+
+            <View
+              style={[
+                styles.sliderContainer,
+                { backgroundColor: theme.colors.surfaceContainer },
+              ]}
+            >
               <View style={styles.sliderHeader}>
-                <Text style={[styles.sliderHeaderText, { color: '#B3B3B3' }]}>
+                <Text
+                  style={[
+                    styles.sliderHeaderText,
+                    { color: theme.colors.onSurfaceVariant },
+                  ]}
+                >
                   Duration (1-500 minutes)
                 </Text>
               </View>
-              
+
               <View style={styles.sliderRow}>
-                <Text style={[styles.sliderLabel, { color: '#B3B3B3' }]}>
+                <Text
+                  style={[
+                    styles.sliderLabel,
+                    { color: theme.colors.onSurfaceVariant },
+                  ]}
+                >
                   1 min
                 </Text>
-                <Text style={[styles.sliderLabel, { color: '#B3B3B3' }]}>
+                <Text
+                  style={[
+                    styles.sliderLabel,
+                    { color: theme.colors.onSurfaceVariant },
+                  ]}
+                >
                   500 min
                 </Text>
               </View>
-              
+
               <Slider
                 style={styles.timerSlider}
                 minimumValue={1}
@@ -452,19 +552,34 @@ export const SpotifyPlaybackBar = () => {
                 step={1}
                 tapToSeek={true}
               />
-              
+
               <View style={styles.selectedTimeContainer}>
-                <Text style={[styles.selectedTimeText, { color: '#1DB954' }]}>
-                  {timerMinutes} minute{timerMinutes !== 1 ? 's' : ''}
+                <Text
+                  style={[
+                    styles.selectedTimeText,
+                    { color: theme.colors.primary },
+                  ]}
+                >
+                  {timerMinutes} minute{timerMinutes !== 1 ? "s" : ""}
                 </Text>
-                <Text style={[styles.selectedTimeSubtext, { color: '#B3B3B3' }]}>
+                <Text
+                  style={[
+                    styles.selectedTimeSubtext,
+                    { color: theme.colors.onSurfaceVariant },
+                  ]}
+                >
                   ({Math.floor(timerMinutes / 60)}h {timerMinutes % 60}m)
                 </Text>
               </View>
             </View>
 
             <View style={styles.quickSelectSection}>
-              <Text style={[styles.quickSelectLabel, { color: 'white' }]}>
+              <Text
+                style={[
+                  styles.quickSelectLabel,
+                  { color: theme.colors.onSurface },
+                ]}
+              >
                 Quick Select
               </Text>
               <View style={styles.quickSelectContainer}>
@@ -473,26 +588,33 @@ export const SpotifyPlaybackBar = () => {
                     key={minutes}
                     style={[
                       styles.quickSelectButton,
-                      { 
-                        backgroundColor: timerMinutes === minutes 
-                          ? '#1DB954' 
-                          : '#282828',
-                        borderColor: timerMinutes === minutes 
-                          ? '#1DB954' 
-                          : 'transparent',
+                      {
+                        backgroundColor:
+                          timerMinutes === minutes
+                            ? theme.colors.primary
+                            : theme.colors.surfaceContainer,
+                        borderColor:
+                          timerMinutes === minutes
+                            ? theme.colors.primary
+                            : theme.colors.outline + "30",
                         borderWidth: 1,
                       },
                     ]}
                     onPress={() => setTimerMinutes(minutes)}
                     activeOpacity={0.7}
                   >
-                    <Text style={[
-                      styles.quickSelectText,
-                      { 
-                        color: 'white',
-                        fontWeight: timerMinutes === minutes ? '600' : '500',
-                      }
-                    ]}>
+                    <Text
+                      style={[
+                        styles.quickSelectText,
+                        {
+                          color:
+                            timerMinutes === minutes
+                              ? theme.colors.onPrimary
+                              : theme.colors.onSurface,
+                          fontWeight: timerMinutes === minutes ? "600" : "500",
+                        },
+                      ]}
+                    >
                       {minutes}m
                     </Text>
                   </TouchableOpacity>
@@ -504,42 +626,47 @@ export const SpotifyPlaybackBar = () => {
               {timer && (
                 <TouchableOpacity
                   style={[
-                    styles.modalButton, 
-                    styles.clearButton, 
-                    { 
-                      backgroundColor: 'rgba(239, 68, 68, 0.2)',
-                      borderColor: 'rgba(239, 68, 68, 0.5)',
+                    styles.modalButton,
+                    styles.clearButton,
+                    {
+                      backgroundColor: "rgba(239, 68, 68, 0.2)",
+                      borderColor: "rgba(239, 68, 68, 0.5)",
                       borderWidth: 1,
-                    }
+                    },
                   ]}
                   onPress={handleClearTimer}
                   activeOpacity={0.8}
                 >
                   <Ionicons name="trash-outline" size={18} color="#EF4444" />
-                  <Text style={[styles.modalButtonText, { color: '#EF4444' }]}>
+                  <Text style={[styles.modalButtonText, { color: "#EF4444" }]}>
                     Clear Timer
                   </Text>
                 </TouchableOpacity>
               )}
-              
+
               <TouchableOpacity
                 style={[
-                  styles.modalButton, 
-                  styles.setButton, 
-                  { 
-                    backgroundColor: '#1DB954',
-                    shadowColor: '#1DB954',
+                  styles.modalButton,
+                  styles.setButton,
+                  {
+                    backgroundColor: "#1DB954",
+                    shadowColor: "#1DB954",
                     shadowOffset: { width: 0, height: 2 },
                     shadowOpacity: 0.3,
                     shadowRadius: 4,
                     elevation: 3,
-                  }
+                  },
                 ]}
                 onPress={() => handleSetTimer(timerMinutes)}
                 activeOpacity={0.9}
               >
                 <Ionicons name="timer" size={18} color="white" />
-                <Text style={[styles.modalButtonText, { color: 'white', fontWeight: '600' }]}>
+                <Text
+                  style={[
+                    styles.modalButtonText,
+                    { color: "white", fontWeight: "600" },
+                  ]}
+                >
                   Set Timer
                 </Text>
               </TouchableOpacity>
@@ -551,280 +678,59 @@ export const SpotifyPlaybackBar = () => {
   );
 };
 
-
-      {showVolumeControl && (
-        <View 
-          style={[
-            styles.volumeContainer, 
-            { 
-              backgroundColor: theme.colors.surfaceContainer,
-            }
-          ]}
-        >
-          <View style={styles.volumeSection}>
-            <TouchableOpacity onPress={() => handleVolumeChange(0)}>
-              <Ionicons name="volume-mute" size={16} color={theme.colors.onSurfaceVariant} />
-            </TouchableOpacity>
-            
-            <View style={styles.sliderWrapper}>
-              <Slider
-                style={styles.volumeSlider}
-                minimumValue={0}
-                maximumValue={1}  
-                value={volume}
-                onValueChange={handleVolumeChange}
-                minimumTrackTintColor={theme.colors.primary}
-                maximumTrackTintColor={theme.colors.outline + '60'}
-                thumbTintColor={theme.colors.primary}
-                step={0.01}
-                tapToSeek={true}
-              />
-            </View>
-            
-            <TouchableOpacity onPress={() => handleVolumeChange(1)}>
-              <Ionicons name="volume-high" size={16} color={theme.colors.onSurfaceVariant} />
-            </TouchableOpacity>
-            
-            <Text style={[styles.volumeText, { color: theme.colors.onSurface }]}>
-              {Math.round(volume * 100)}%
-            </Text>
-          </View>
-          
-          <View style={styles.quickVolumeButtons}>
-            <TouchableOpacity 
-              style={[styles.quickVolumeButton, { backgroundColor: theme.colors.primary }]}
-              onPress={() => handleVolumeChange(0.25)}
-            >
-              <Text style={styles.quickVolumeText}>25%</Text>
-            </TouchableOpacity>
-            <TouchableOpacity 
-              style={[styles.quickVolumeButton, { backgroundColor: theme.colors.primary }]}
-              onPress={() => handleVolumeChange(0.5)}
-            >
-              <Text style={styles.quickVolumeText}>50%</Text>
-            </TouchableOpacity>
-            <TouchableOpacity 
-              style={[styles.quickVolumeButton, { backgroundColor: theme.colors.primary }]}
-              onPress={() => handleVolumeChange(0.75)}
-            >
-              <Text style={styles.quickVolumeText}>75%</Text>
-            </TouchableOpacity>
-            <TouchableOpacity 
-              style={[styles.quickVolumeButton, { backgroundColor: theme.colors.primary }]}
-              onPress={() => handleVolumeChange(1)}
-            >
-              <Text style={styles.quickVolumeText}>100%</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      )}
-
-      <Modal
-        visible={showTimerModal}
-        transparent={true}
-        animationType="slide"
-        onRequestClose={() => setShowTimerModal(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={[styles.modalContent, { backgroundColor: theme.colors.surface }]}>
-            <View style={styles.modalHeader}>
-              <Text style={[styles.modalTitle, { color: theme.colors.onSurface }]}>
-                Sleep Timer
-              </Text>
-              <TouchableOpacity 
-                onPress={() => setShowTimerModal(false)}
-                style={[styles.closeButton, { backgroundColor: theme.colors.surfaceVariant }]}
-              >
-                <Ionicons name="close" size={20} color={theme.colors.onSurfaceVariant} />
-              </TouchableOpacity>
-            </View>
-
-            <Text style={[styles.modalSubtitle, { color: theme.colors.onSurfaceVariant }]}>
-              Audio will automatically stop after selected time
-            </Text>
-            
-            <View style={[styles.sliderContainer, { backgroundColor: theme.colors.surfaceContainer }]}>
-              <View style={styles.sliderHeader}>
-                <Text style={[styles.sliderHeaderText, { color: theme.colors.onSurfaceContainer }]}>
-                  Duration (1-500 minutes)
-                </Text>
-              </View>
-              
-              <View style={styles.sliderRow}>
-                <Text style={[styles.sliderLabel, { color: theme.colors.onSurfaceContainer }]}>
-                  1 min
-                </Text>
-                <Text style={[styles.sliderLabel, { color: theme.colors.onSurfaceContainer }]}>
-                  500 min
-                </Text>
-              </View>
-              
-              <Slider
-                style={styles.timerSlider}
-                minimumValue={1}
-                maximumValue={500}
-                value={timerMinutes}
-                onValueChange={setTimerMinutes}
-                minimumTrackTintColor={theme.colors.primary}
-                maximumTrackTintColor={theme.colors.outline}
-                thumbTintColor={theme.colors.primary}
-                step={1}
-                tapToSeek={true}
-              />
-              
-              <View style={styles.selectedTimeContainer}>
-                <Text style={[styles.selectedTimeText, { color: theme.colors.primary }]}>
-                  {timerMinutes} minute{timerMinutes !== 1 ? 's' : ''}
-                </Text>
-                <Text style={[styles.selectedTimeSubtext, { color: theme.colors.onSurfaceVariant }]}>
-                  ({Math.floor(timerMinutes / 60)}h {timerMinutes % 60}m)
-                </Text>
-              </View>
-            </View>
-
-            <View style={styles.quickSelectSection}>
-              <Text style={[styles.quickSelectLabel, { color: theme.colors.onSurface }]}>
-                Quick Select
-              </Text>
-              <View style={styles.quickSelectContainer}>
-                {[5, 15, 30, 60, 90, 120].map((minutes) => (
-                  <TouchableOpacity
-                    key={minutes}
-                    style={[
-                      styles.quickSelectButton,
-                      { 
-                        backgroundColor: timerMinutes === minutes 
-                          ? theme.colors.primary 
-                          : theme.colors.surfaceContainer,
-                        borderColor: timerMinutes === minutes 
-                          ? theme.colors.primary 
-                          : theme.colors.outline + '30',
-                        borderWidth: 1,
-                      },
-                    ]}
-                    onPress={() => setTimerMinutes(minutes)}
-                    activeOpacity={0.7}
-                  >
-                    <Text style={[
-                      styles.quickSelectText,
-                      { 
-                        color: timerMinutes === minutes 
-                          ? 'white' 
-                          : theme.colors.onSurface,
-                        fontWeight: timerMinutes === minutes ? '600' : '500',
-                      }
-                    ]}>
-                      {minutes}m
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            </View>
-
-            <View style={styles.modalButtons}>
-              {timer && (
-                <TouchableOpacity
-                  style={[
-                    styles.modalButton, 
-                    styles.clearButton, 
-                    { 
-                      backgroundColor: theme.colors.errorContainer,
-                      borderColor: theme.colors.error + '30',
-                      borderWidth: 1,
-                    }
-                  ]}
-                  onPress={handleClearTimer}
-                  activeOpacity={0.8}
-                >
-                  <Ionicons name="trash-outline" size={18} color={theme.colors.onErrorContainer} />
-                  <Text style={[styles.modalButtonText, { color: theme.colors.onErrorContainer }]}>
-                    Clear Timer
-                  </Text>
-                </TouchableOpacity>
-              )}
-              
-              <TouchableOpacity
-                style={[
-                  styles.modalButton, 
-                  styles.setButton, 
-                  { 
-                    backgroundColor: theme.colors.primary,
-                    shadowColor: theme.colors.primary,
-                    shadowOffset: { width: 0, height: 2 },
-                    shadowOpacity: 0.3,
-                    shadowRadius: 4,
-                    elevation: 3,
-                  }
-                ]}
-                onPress={() => handleSetTimer(timerMinutes)}
-                activeOpacity={0.9}
-              >
-                <Ionicons name="timer" size={18} color="white" />
-                <Text style={[styles.modalButtonText, { color: 'white', fontWeight: '600' }]}>
-                  Set Timer
-                </Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
-    </LinearGradient>
-  );
-};
-
 const styles = StyleSheet.create({
   container: {
-    position: 'absolute',
-    bottom: Platform.OS === 'ios' ? 86 : 66, // Position above the tab bar
+    position: "absolute",
+    bottom: Platform.OS === "ios" ? 86 : 66, // Position above the tab bar
     left: 8,
     right: 8,
     height: 64,
     borderRadius: 8,
-    backgroundColor: '#191414', // Spotify Black/Dark Grey
+    backgroundColor: "#191414", // Spotify Black/Dark Grey
     borderTopWidth: 0,
     elevation: 10,
-    shadowColor: '#000',
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
-    overflow: 'hidden', // Ensure rounded corners clip content
+    overflow: "hidden", // Ensure rounded corners clip content
     zIndex: 100,
   },
   progressContainer: {
     height: 2,
-    width: '100%',
-    backgroundColor: 'rgba(255,255,255,0.1)',
-    position: 'absolute',
+    width: "100%",
+    backgroundColor: "rgba(255,255,255,0.1)",
+    position: "absolute",
     bottom: 0, // Move progress bar to bottom of mini player
     zIndex: 10,
   },
   progressBar: {
     height: 2,
-    width: '100%',
-    backgroundColor: '#1DB954', // Spotify Green
+    width: "100%",
+    backgroundColor: "#1DB954", // Spotify Green
   },
   playingIndicator: {
-    position: 'absolute',
+    position: "absolute",
     right: 16,
     bottom: 24, // Adjust for new height
-    flexDirection: 'row',
-    alignItems: 'flex-end',
+    flexDirection: "row",
+    alignItems: "flex-end",
     height: 12,
   },
   timerCountdownBar: {
-    display: 'none', // Hide timer bar in mini player to save space
+    display: "none", // Hide timer bar in mini player to save space
   },
   mainContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     paddingHorizontal: 12,
     paddingVertical: 8,
-    height: '100%',
+    height: "100%",
   },
   leftSection: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     flex: 1,
     marginRight: 12,
   },
@@ -832,51 +738,51 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 4,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     marginRight: 12,
-    backgroundColor: '#282828',
+    backgroundColor: "#282828",
   },
   trackTitle: {
     fontSize: 14,
-    fontWeight: '600',
+    fontWeight: "600",
     marginBottom: 2,
-    color: 'white',
+    color: "white",
   },
   trackSubtitle: {
     fontSize: 12,
-    fontWeight: '400',
-    color: '#B3B3B3',
+    fontWeight: "400",
+    color: "#B3B3B3",
   },
   rightSection: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 16,
   },
   controlButton: {
     width: 32,
     height: 32,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
   },
   playButton: {
     width: 32,
     height: 32,
     borderRadius: 16,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: 'transparent', // Remove circle background for cleaner look
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "transparent", // Remove circle background for cleaner look
   },
-  
+
   // Volume Control
   volumeContainer: {
     padding: 16,
     borderTopWidth: 0.5,
-    borderTopColor: 'rgba(0,0,0,0.05)',
+    borderTopColor: "rgba(0,0,0,0.05)",
   },
   volumeSection: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 12,
     marginBottom: 12,
   },
@@ -884,30 +790,30 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   volumeSlider: {
-    width: '100%',
+    width: "100%",
     height: 40,
   },
   volumeText: {
     fontSize: 12,
-    fontWeight: '600',
+    fontWeight: "600",
     width: 36,
-    textAlign: 'right',
+    textAlign: "right",
   },
   quickVolumeButtons: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    justifyContent: "space-between",
     gap: 8,
   },
   quickVolumeButton: {
     flex: 1,
     paddingVertical: 6,
     borderRadius: 8,
-    alignItems: 'center',
+    alignItems: "center",
   },
   quickVolumeText: {
-    color: 'white',
+    color: "white",
     fontSize: 10,
-    fontWeight: '700',
+    fontWeight: "700",
   },
 
   // Full Screen Player Styles
@@ -918,77 +824,81 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   fsHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 24,
-    paddingTop: 20,
-    marginBottom: 40,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 20,
+    paddingTop: 16,
+    marginBottom: 20,
   },
   fsHeaderButton: {
     padding: 8,
   },
   fsHeaderTitle: {
     fontSize: 12,
-    fontWeight: '700',
+    fontWeight: "700",
     letterSpacing: 1,
   },
   fsContent: {
     flex: 1,
-    paddingHorizontal: 24,
+    paddingHorizontal: 20,
+    paddingBottom: 24,
+  },
+  fsContentInner: {
+    paddingBottom: 8,
   },
   fsArtworkContainer: {
-    alignItems: 'center',
-    marginBottom: 40,
+    alignItems: "center",
+    marginBottom: 24,
     shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.4,
-    shadowRadius: 24,
-    elevation: 10,
+    shadowOpacity: 0.35,
+    shadowRadius: 20,
+    elevation: 8,
   },
   fsArtwork: {
-    width: width - 48,
-    height: width - 48,
-    borderRadius: 24,
-    justifyContent: 'center',
-    alignItems: 'center',
+    width: width - 96,
+    height: width - 96,
+    borderRadius: 20,
+    justifyContent: "center",
+    alignItems: "center",
   },
   fsArtworkIcon: {
     fontSize: 80,
   },
   fsTrackInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     marginBottom: 32,
   },
   fsTitle: {
     fontSize: 24,
-    fontWeight: '700',
+    fontWeight: "700",
     marginBottom: 4,
   },
   fsSubtitle: {
     fontSize: 18,
-    fontWeight: '500',
+    fontWeight: "500",
   },
   factCard: {
-    padding: 16,
-    borderRadius: 16,
-    marginBottom: 32,
+    padding: 14,
+    borderRadius: 14,
+    marginBottom: 20,
   },
   factHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 8,
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 6,
     gap: 6,
   },
   factLabel: {
     fontSize: 12,
-    fontWeight: '700',
-    letterSpacing: 0.5,
+    fontWeight: "700",
+    letterSpacing: 0.3,
   },
   factText: {
-    fontSize: 14,
-    lineHeight: 20,
+    fontSize: 13,
+    lineHeight: 18,
     opacity: 0.9,
   },
   fsProgressContainer: {
@@ -996,25 +906,25 @@ const styles = StyleSheet.create({
   },
   fsProgressBar: {
     height: 4,
-    backgroundColor: 'rgba(255,255,255,0.1)',
+    backgroundColor: "rgba(255,255,255,0.1)",
     borderRadius: 2,
     marginBottom: 8,
-    overflow: 'hidden',
+    overflow: "hidden",
   },
   fsProgressFill: {
-    height: '100%',
+    height: "100%",
     borderRadius: 2,
   },
   fsTimeLabels: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    justifyContent: "space-between",
   },
   fsTimeText: {
     fontSize: 12,
     opacity: 0.7,
   },
   fsNoTimer: {
-    alignItems: 'center',
+    alignItems: "center",
     paddingVertical: 8,
   },
   fsNoTimerText: {
@@ -1023,56 +933,56 @@ const styles = StyleSheet.create({
     letterSpacing: 1,
   },
   fsControls: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 40,
-    paddingHorizontal: 16,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 24,
+    paddingHorizontal: 12,
   },
   fsPlayButton: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    justifyContent: 'center',
-    alignItems: 'center',
-    elevation: 4,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    justifyContent: "center",
+    alignItems: "center",
+    elevation: 3,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.25,
+    shadowRadius: 6,
   },
   fsVolumeContainer: {
-    paddingHorizontal: 16,
+    paddingHorizontal: 12,
   },
 
   // Modal Styles
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.6)',
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: "rgba(0, 0, 0, 0.6)",
+    justifyContent: "center",
+    alignItems: "center",
     paddingHorizontal: 20,
   },
   modalContent: {
-    width: '100%',
+    width: "100%",
     maxWidth: 340,
     borderRadius: 24,
     padding: 24,
     elevation: 8,
-    shadowColor: '#000',
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 12,
   },
   modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     marginBottom: 8,
   },
   modalTitle: {
     fontSize: 20,
-    fontWeight: '700',
+    fontWeight: "700",
   },
   closeButton: {
     padding: 4,
@@ -1092,26 +1002,26 @@ const styles = StyleSheet.create({
   },
   sliderHeaderText: {
     fontSize: 12,
-    fontWeight: '600',
-    textTransform: 'uppercase',
+    fontWeight: "600",
+    textTransform: "uppercase",
     letterSpacing: 0.5,
   },
   sliderRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    justifyContent: "space-between",
     marginBottom: 8,
   },
   sliderLabel: {
     fontSize: 12,
-    fontWeight: '500',
+    fontWeight: "500",
   },
   selectedTimeContainer: {
-    alignItems: 'center',
+    alignItems: "center",
     marginTop: 12,
   },
   selectedTimeText: {
     fontSize: 24,
-    fontWeight: '700',
+    fontWeight: "700",
   },
   selectedTimeSubtext: {
     fontSize: 14,
@@ -1122,47 +1032,57 @@ const styles = StyleSheet.create({
   },
   quickSelectLabel: {
     fontSize: 14,
-    fontWeight: '600',
+    fontWeight: "600",
     marginBottom: 12,
   },
   quickSelectContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
+    flexDirection: "row",
+    flexWrap: "wrap",
     gap: 8,
   },
   quickSelectButton: {
-    flexBasis: '30%',
+    flexBasis: "30%",
     flexGrow: 1,
     paddingVertical: 10,
     borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   quickSelectText: {
     fontSize: 14,
-    fontWeight: '600',
+    fontWeight: "600",
   },
   timerSlider: {
-    width: '100%',
+    width: "100%",
     height: 40,
   },
+  timerCountdownRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    marginBottom: 12,
+  },
+  timerCountdownText: {
+    fontSize: 14,
+    fontWeight: "600",
+  },
   timerValue: {
-    textAlign: 'center',
+    textAlign: "center",
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: "600",
     marginBottom: 24,
   },
   modalButtons: {
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: 12,
   },
   modalButton: {
     flex: 1,
     paddingVertical: 14,
     borderRadius: 14,
-    alignItems: 'center',
-    justifyContent: 'center',
-    flexDirection: 'row',
+    alignItems: "center",
+    justifyContent: "center",
+    flexDirection: "row",
     gap: 8,
   },
   clearButton: {
@@ -1173,6 +1093,6 @@ const styles = StyleSheet.create({
   },
   modalButtonText: {
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: "600",
   },
 });

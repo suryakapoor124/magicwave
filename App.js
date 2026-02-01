@@ -1,17 +1,16 @@
-import React, { useEffect, useState, useCallback } from 'react';
-import { View, StyleSheet, Alert, Text } from 'react-native';
-import { StatusBar } from 'expo-status-bar';
-import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import * as Device from 'expo-device';
-import * as SplashScreen from 'expo-splash-screen';
-import { AppNavigator } from './src/navigation/AppNavigator';
-import { AudioProvider } from './src/contexts/AudioContext';
-import { CustomSplashScreen } from './src/components/CustomSplashScreen';
-import ThemeProvider, { useTheme } from './src/utils/theme';
-import { settingsManager } from './src/utils/storage';
-import { audioEngine } from './src/utils/audio';
-import { useFonts } from 'expo-font';
-import { Ionicons } from '@expo/vector-icons';
+import React, { useEffect, useState } from "react";
+import { View, StyleSheet, Text } from "react-native";
+import { StatusBar } from "expo-status-bar";
+import { GestureHandlerRootView } from "react-native-gesture-handler";
+import * as SplashScreen from "expo-splash-screen";
+import * as Font from "expo-font";
+import { Ionicons } from "@expo/vector-icons";
+import { AppNavigator } from "./src/navigation/AppNavigator";
+import { AudioProvider } from "./src/contexts/AudioContext";
+import { CustomSplashScreen } from "./src/components/CustomSplashScreen";
+import ThemeProvider, { useTheme } from "./src/utils/theme";
+import { settingsManager } from "./src/utils/storage";
+import { audioEngine } from "./src/utils/audio";
 
 SplashScreen.preventAutoHideAsync();
 
@@ -25,69 +24,60 @@ export default function App() {
 
 function Main() {
   const { theme, isDark } = useTheme();
-  const [isInitialized, setIsInitialized] = useState(false);
-
-  const [fontsLoaded, fontError] = useFonts({
-    ...Ionicons.font,
-  });
+  const [isReady, setIsReady] = useState(false);
 
   useEffect(() => {
-    initializeApp();
-  }, []);
-
-  const initializeApp = async () => {
-    try {
-      // Initialize app components
-      await settingsManager.initialize();
-      
-      // Check device compatibility
-      if (!Device.isDevice) {
-        Alert.alert(
-          'Device Warning',
-          'This app works best on a physical device for optimal audio experience.',
-          [{ text: 'OK' }]
-        );
+    async function prepare() {
+      try {
+        // Load fonts
+        await Font.loadAsync({
+          ...Ionicons.font,
+          Ubuntu_300Light:
+            "https://fonts.gstatic.com/s/ubuntu/v20/4iCpE_yL0EHgdJg1E_BCIg.ttf",
+          Ubuntu_400Regular:
+            "https://fonts.gstatic.com/s/ubuntu/v20/4iCpE_yL0EHgdJg1E_BCIg.ttf",
+          Ubuntu_500Medium:
+            "https://fonts.gstatic.com/s/ubuntu/v20/4iCuE_yL0EHgdJg1E_B8iHN2LhhFpJEaKuSM.ttf",
+          Ubuntu_700Bold:
+            "https://fonts.gstatic.com/s/ubuntu/v20/4iCuE_yL0EHgdJg1E_B8rHN2LhhFpJEaKuSM.ttf",
+        });
+      } catch (error) {
+        console.warn("Font loading issue, using system fonts:", error.message);
       }
 
-      // Setup audio engine
-      await audioEngine.setupAudio();
+      try {
+        // Initialize settings
+        await settingsManager.initialize();
+      } catch (error) {
+        console.error("Settings init error:", error.message);
+      }
 
-    } catch (error) {
-      console.error('App initialization error:', error);
-      // Don't set initialized here, let onLayout handle it
-    } finally {
-      setIsInitialized(true);
+      try {
+        // Setup audio
+        await audioEngine.setupAudio();
+      } catch (error) {
+        console.error("Audio setup error:", error.message);
+      }
+
+      setIsReady(true);
     }
-  };
 
-  const onLayoutRootView = useCallback(async () => {
-    if (isInitialized && fontsLoaded) {
-      await SplashScreen.hideAsync();
+    prepare();
+  }, []);
+
+  useEffect(() => {
+    if (isReady) {
+      SplashScreen.hideAsync().catch(() => {});
     }
-  }, [isInitialized, fontsLoaded]);
+  }, [isReady]);
 
-  if (!fontsLoaded && !fontError) {
+  if (!isReady) {
     return <CustomSplashScreen isDark={isDark} />;
-  }
-
-  if (!isInitialized) {
-    return <CustomSplashScreen isDark={isDark} />;
-  }
-
-  if (fontError) {
-    return (
-      <View style={[styles.errorContainer, { backgroundColor: theme.colors.background }]}>
-        <StatusBar style={isDark ? 'light' : 'dark'} />
-        <Text style={[styles.errorText, { color: theme.colors.onSurface }]}>
-          Error loading fonts. Please restart the app.
-        </Text>
-      </View>
-    );
   }
 
   return (
-    <GestureHandlerRootView style={styles.container} onLayout={onLayoutRootView}>
-      <StatusBar style={isDark ? 'light' : 'dark'} />
+    <GestureHandlerRootView style={styles.container}>
+      <StatusBar style={isDark ? "light" : "dark"} />
       <AudioProvider>
         <AppNavigator />
       </AudioProvider>
@@ -98,21 +88,5 @@ function Main() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  errorContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
-  },
-  errorText: {
-    fontSize: 16,
-    textAlign: 'center',
-    fontWeight: '500',
   },
 });

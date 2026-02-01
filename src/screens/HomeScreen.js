@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef } from "react";
 import {
   View,
   Text,
@@ -10,20 +10,18 @@ import {
   StatusBar,
   RefreshControl,
   Platform,
-  Image,
-} from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
-import { Ionicons } from '@expo/vector-icons';
-import { useTheme, getCategoryColor } from '../utils/theme';
-import { useAudioContext } from '../contexts/AudioContext';
-import { frequencyCategories, popularFrequencies } from '../data/frequencies';
-import { FrequencyCard } from '../components/FrequencyCard';
-import { AnimatedCard, BouncyButton, PulseView, LoadingSpinner } from '../components/Animated';
-import { MeditationLogo } from '../components/MeditationLogo';
-import { favoritesManager, settingsManager } from '../utils/storage';
-import { audioEngine, AudioUtils } from '../utils/audio';
+  FlatList,
+} from "react-native";
+import { LinearGradient } from "expo-linear-gradient";
+import { Ionicons } from "@expo/vector-icons";
+import { useTheme, getCategoryColor, fontFamilies } from "../utils/theme";
+import { useAudioContext } from "../contexts/AudioContext";
+import { frequencyCategories, popularFrequencies } from "../data/frequencies";
+import { FrequencyCard } from "../components/FrequencyCard";
+import { BouncyButton, LoadingSpinner } from "../components/Animated";
+import { favoritesManager, settingsManager } from "../utils/storage";
 
-const { width, height } = Dimensions.get('window');
+const { width, height } = Dimensions.get("window");
 
 export const HomeScreen = ({ navigation, route }) => {
   const { theme, isDark, toggleTheme } = useTheme();
@@ -31,9 +29,9 @@ export const HomeScreen = ({ navigation, route }) => {
   const [frequencies, setFrequencies] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [selectedCategory, setSelectedCategory] = useState("All");
   const scrollViewRef = useRef(null);
 
-  // Handle category selection from other tabs if needed
   const selectedCategoryParam = route.params?.selectedCategory;
 
   useEffect(() => {
@@ -43,8 +41,9 @@ export const HomeScreen = ({ navigation, route }) => {
   useEffect(() => {
     if (selectedCategoryParam) {
       loadFrequencies(selectedCategoryParam);
+      setSelectedCategory(selectedCategoryParam);
     } else {
-      loadFrequencies('All');
+      loadFrequencies("All");
     }
   }, [selectedCategoryParam]);
 
@@ -53,9 +52,9 @@ export const HomeScreen = ({ navigation, route }) => {
     try {
       await favoritesManager.initialize();
       await settingsManager.initialize();
-      await loadFrequencies('All');
+      await loadFrequencies("All");
     } catch (error) {
-      console.error('Error initializing app:', error);
+      console.error("Error initializing app:", error);
     } finally {
       setIsLoading(false);
     }
@@ -64,36 +63,38 @@ export const HomeScreen = ({ navigation, route }) => {
   const loadFrequencies = async (category) => {
     try {
       let freqList = [];
-      if (category === 'All' || !category) {
-        // Load popular and random mix for Home
-        const popularWithCategory = popularFrequencies.map(freq => ({
-          ...freq,
-          isPopular: true,
-        }));
-        
-        // Get some random ones for "Surprise Me"
+      if (category === "All" || !category) {
+        // Load ALL frequencies from all categories
         const allFreqs = [];
         Object.entries(frequencyCategories).forEach(([catName, catData]) => {
-          catData.frequencies.forEach(freq => {
-            allFreqs.push({ ...freq, category: catName });
+          catData.frequencies.forEach((freq) => {
+            allFreqs.push({
+              ...freq,
+              category: catName,
+              isPopular: popularFrequencies.some((pf) => pf.id === freq.id),
+            });
           });
         });
-        
-        // Shuffle for variety
-        const shuffled = allFreqs.sort(() => 0.5 - Math.random()).slice(0, 10);
-        freqList = [...popularWithCategory, ...shuffled];
+
+        // Sort: popular first, then by frequency value
+        freqList = allFreqs.sort((a, b) => {
+          if (a.isPopular && !b.isPopular) return -1;
+          if (!a.isPopular && b.isPopular) return 1;
+          return a.frequency - b.frequency;
+        });
       } else {
         const categoryData = frequencyCategories[category];
         if (categoryData) {
-          freqList = categoryData.frequencies.map(freq => ({
+          freqList = categoryData.frequencies.map((freq) => ({
             ...freq,
             category: category,
+            isPopular: popularFrequencies.some((pf) => pf.id === freq.id),
           }));
         }
       }
       setFrequencies(freqList);
     } catch (error) {
-      console.error('Error loading frequencies:', error);
+      console.error("Error loading frequencies:", error);
     }
   };
 
@@ -104,121 +105,409 @@ export const HomeScreen = ({ navigation, route }) => {
 
   const handleRefresh = async () => {
     setRefreshing(true);
-    await loadFrequencies(selectedCategoryParam || 'All');
+    await loadFrequencies(selectedCategory);
     setRefreshing(false);
   };
 
+  const handleCategoryPress = (category) => {
+    setSelectedCategory(category);
+    loadFrequencies(category);
+  };
+
   const renderHeader = () => (
-    <View style={styles.header}>
-      <View style={styles.topBar}>
-        <View>
-          <Text style={[styles.greeting, { color: theme.colors.onSurfaceVariant }]}>
-            Welcome back,
+    <LinearGradient
+      colors={[theme.colors.primary + "25", theme.colors.secondary + "12"]}
+      start={{ x: 0, y: 0 }}
+      end={{ x: 1, y: 1 }}
+      style={styles.headerGradient}
+    >
+      <View style={styles.headerContent}>
+        <View style={styles.headerLeft}>
+          <Text
+            style={[
+              styles.greeting,
+              {
+                color: theme.colors.onSurfaceVariant,
+                fontFamily: fontFamilies.regular,
+              },
+            ]}
+          >
+            Welcome back
           </Text>
-          <Text style={[styles.appTitle, { color: theme.colors.onSurface }]}>
+          <Text
+            style={[
+              styles.appTitle,
+              { color: theme.colors.primary, fontFamily: fontFamilies.bold },
+            ]}
+          >
             MagicWave
           </Text>
+          <Text
+            style={[
+              styles.tagline,
+              {
+                color: theme.colors.onSurfaceVariant,
+                fontFamily: fontFamilies.regular,
+              },
+            ]}
+          >
+            Discover healing frequencies
+          </Text>
         </View>
-        <TouchableOpacity 
+        <TouchableOpacity
           onPress={toggleTheme}
-          style={[styles.themeButton, { backgroundColor: theme.colors.surfaceContainerHigh }]}
+          style={[
+            styles.themeButton,
+            {
+              backgroundColor: theme.colors.surfaceContainer,
+              borderColor: theme.colors.primary + "30",
+              borderWidth: 1.5,
+            },
+          ]}
         >
-          <Ionicons 
-            name={isDark ? 'sunny' : 'moon'} 
-            size={20} 
-            color={theme.colors.primary} 
-          />
+          <LinearGradient
+            colors={[theme.colors.primary, theme.colors.secondary]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.themeButtonGradient}
+          >
+            <Ionicons
+              name={isDark ? "sunny" : "moon"}
+              size={18}
+              color="white"
+            />
+          </LinearGradient>
         </TouchableOpacity>
       </View>
-    </View>
+    </LinearGradient>
   );
 
-  const renderDidYouKnow = () => (
-    <View style={styles.factContainer}>
-      <LinearGradient
-        colors={[theme.colors.primary, theme.colors.secondary]}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={styles.factCard}
-      >
-        <View style={styles.factHeader}>
-          <Ionicons name="bulb" size={24} color="white" />
-          <Text style={styles.factLabel}>Did You Know?</Text>
-        </View>
-        <Text style={styles.factText}>
-          Listening to specific frequencies can influence your emotional state by up to 40%, helping to reduce anxiety and improve focus naturally.
-        </Text>
-      </LinearGradient>
-    </View>
-  );
+  const didYouKnowFacts = [
+    {
+      title: "Brain Entrainment",
+      description:
+        "Binaural beats at 40Hz can enhance cognitive function and focus by synchronizing brainwave patterns.",
+      icon: "brain",
+    },
+    {
+      title: "Healing Frequencies",
+      description:
+        "528 Hz is known as the 'Love Frequency' and may promote DNA repair and emotional balance.",
+      icon: "heart",
+    },
+    {
+      title: "Sleep Science",
+      description:
+        "Delta waves at 2-4 Hz frequencies are naturally produced during deep sleep and restoration.",
+      icon: "moon",
+    },
+    {
+      title: "Chakra Alignment",
+      description:
+        "Ancient frequencies like 432 Hz align with natural harmonic ratios found in nature.",
+      icon: "sparkles",
+    },
+  ];
 
-  const renderSurpriseMe = () => (
-    <View style={styles.section}>
-      <Text style={[styles.sectionTitle, { color: theme.colors.onSurface }]}>
-        Daily Mix
-      </Text>
-      <ScrollView 
-        horizontal 
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.horizontalScroll}
-      >
-        {frequencies.slice(0, 5).map((freq, index) => (
-          <FrequencyCard
-            key={`surprise-${freq.id}`}
-            frequency={freq}
-            onPress={handleFrequencyPress}
-            isPlaying={currentFrequency?.id === freq.id && isPlaying}
-            style={styles.horizontalCard}
-            showCategory={false}
-          />
-        ))}
-      </ScrollView>
-    </View>
-  );
+  const getRandomFact = () => {
+    return didYouKnowFacts[Math.floor(Math.random() * didYouKnowFacts.length)];
+  };
 
-  const renderFrequencyGrid = () => (
-    <View style={styles.section}>
-      <Text style={[styles.sectionTitle, { color: theme.colors.onSurface }]}>
-        Trending Now
-      </Text>
-      <View style={styles.frequenciesGrid}>
-        {frequencies.slice(5).map((frequency, index) => (
-          <FrequencyCard
-            key={`${frequency.id}-${frequency.category}`}
-            frequency={frequency}
-            onPress={handleFrequencyPress}
-            index={index}
-            isPlaying={currentFrequency?.id === frequency.id && isPlaying}
-            style={styles.frequencyCardStyle}
-          />
-        ))}
+  const [currentFact] = useState(getRandomFact());
+
+  const renderDidYouKnow = () => {
+    return (
+      <View style={styles.factContainer}>
+        <LinearGradient
+          colors={
+            isDark
+              ? [theme.colors.primary, theme.colors.tertiary]
+              : [theme.colors.primary, theme.colors.secondary]
+          }
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={styles.factCard}
+        >
+          <View style={styles.factIconContainer}>
+            <Ionicons name={currentFact.icon} size={28} color="white" />
+          </View>
+          <View style={styles.factContent}>
+            <Text style={[styles.factTitle, { fontFamily: fontFamilies.bold }]}>
+              {currentFact.title}
+            </Text>
+            <Text
+              style={[styles.factText, { fontFamily: fontFamilies.regular }]}
+            >
+              {currentFact.description}
+            </Text>
+          </View>
+        </LinearGradient>
       </View>
-    </View>
-  );
+    );
+  };
+
+  const renderCategoryButtons = () => {
+    const categories = ["All", ...Object.keys(frequencyCategories)];
+
+    return (
+      <View style={styles.categorySection}>
+        <Text
+          style={[
+            styles.categoryTitle,
+            { color: theme.colors.onSurface, fontFamily: fontFamilies.bold },
+          ]}
+        >
+          Categories
+        </Text>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.categoryScroll}
+        >
+          {categories.map((category) => {
+            const isSelected = selectedCategory === category;
+            const categoryColor = getCategoryColor(category, isDark);
+
+            return (
+              <TouchableOpacity
+                key={category}
+                onPress={() => handleCategoryPress(category)}
+                style={[
+                  styles.categoryButton,
+                  {
+                    backgroundColor: isSelected
+                      ? categoryColor + "25"
+                      : theme.colors.surfaceContainer,
+                    borderColor: isSelected
+                      ? categoryColor
+                      : theme.colors.outline + "30",
+                    borderWidth: isSelected ? 2 : 1,
+                  },
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.categoryButtonText,
+                    {
+                      color: isSelected
+                        ? categoryColor
+                        : theme.colors.onSurface,
+                      fontFamily: isSelected
+                        ? fontFamilies.bold
+                        : fontFamilies.medium,
+                    },
+                  ]}
+                >
+                  {category}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </ScrollView>
+      </View>
+    );
+  };
+
+  const renderTrendingSection = () => {
+    const trendingFreqs = frequencies.filter((f) => f.isPopular).slice(0, 4);
+
+    if (trendingFreqs.length === 0) return null;
+
+    return (
+      <View style={styles.section}>
+        <View style={styles.sectionHeader}>
+          <Ionicons name="flame" size={24} color="#FF6B6B" />
+          <Text
+            style={[
+              styles.sectionTitle,
+              { color: theme.colors.onSurface, fontFamily: fontFamilies.bold },
+            ]}
+          >
+            Trending Now
+          </Text>
+        </View>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.trendingScroll}
+        >
+          {trendingFreqs.map((freq) => (
+            <View
+              key={`trending-${freq.id}`}
+              style={styles.trendingCardWrapper}
+            >
+              <LinearGradient
+                colors={[
+                  getCategoryColor(freq.category, isDark) + "20",
+                  getCategoryColor(freq.category, isDark) + "05",
+                ]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.trendingCard}
+              >
+                <TouchableOpacity
+                  onPress={() => handleFrequencyPress(freq)}
+                  activeOpacity={0.8}
+                  style={styles.trendingCardContent}
+                >
+                  <View style={styles.trendingBadge}>
+                    <Ionicons name="star" size={16} color="#FFD700" />
+                  </View>
+                  <Text style={[styles.trendingEmoji]}>{freq.image}</Text>
+                  <Text
+                    style={[
+                      styles.trendingName,
+                      {
+                        color: theme.colors.onSurface,
+                        fontFamily: fontFamilies.bold,
+                      },
+                    ]}
+                  >
+                    {freq.name}
+                  </Text>
+                  <Text
+                    style={[
+                      styles.trendingFreq,
+                      {
+                        color: getCategoryColor(freq.category, isDark),
+                        fontFamily: fontFamilies.bold,
+                      },
+                    ]}
+                  >
+                    {freq.frequency}Hz
+                  </Text>
+                  <View
+                    style={[
+                      styles.trendingPlayButton,
+                      {
+                        backgroundColor: getCategoryColor(
+                          freq.category,
+                          isDark,
+                        ),
+                      },
+                    ]}
+                  >
+                    <Ionicons
+                      name={
+                        currentFrequency?.id === freq.id && isPlaying
+                          ? "pause-sharp"
+                          : "play-sharp"
+                      }
+                      size={18}
+                      color="white"
+                    />
+                  </View>
+                </TouchableOpacity>
+              </LinearGradient>
+            </View>
+          ))}
+        </ScrollView>
+      </View>
+    );
+  };
+
+  const renderFrequenciesSection = () => {
+    if (frequencies.length === 0) {
+      return (
+        <View style={styles.emptyState}>
+          <Ionicons
+            name="search"
+            size={48}
+            color={theme.colors.onSurfaceVariant}
+          />
+          <Text
+            style={[
+              styles.emptyText,
+              { color: theme.colors.onSurface, fontFamily: fontFamilies.bold },
+            ]}
+          >
+            No frequencies found
+          </Text>
+        </View>
+      );
+    }
+
+    const displayFreqs =
+      selectedCategory === "All"
+        ? frequencies.filter((f) => !f.isPopular)
+        : frequencies;
+
+    return (
+      <View style={styles.section}>
+        <View style={styles.sectionHeader}>
+          <Ionicons name="grid" size={24} color={theme.colors.primary} />
+          <Text
+            style={[
+              styles.sectionTitle,
+              { color: theme.colors.onSurface, fontFamily: fontFamilies.bold },
+            ]}
+          >
+            {selectedCategory === "All" ? "All Frequencies" : selectedCategory}
+          </Text>
+          <Text
+            style={[
+              styles.frequencyCount,
+              {
+                color: theme.colors.onSurfaceVariant,
+                fontFamily: fontFamilies.regular,
+              },
+            ]}
+          >
+            ({displayFreqs.length})
+          </Text>
+        </View>
+        <View style={styles.frequenciesGrid}>
+          {displayFreqs.map((frequency, index) => (
+            <FrequencyCard
+              key={`${frequency.id}-${frequency.category}-${index}`}
+              frequency={frequency}
+              onPress={handleFrequencyPress}
+              index={index}
+              isPlaying={currentFrequency?.id === frequency.id && isPlaying}
+              style={styles.frequencyCardStyle}
+            />
+          ))}
+        </View>
+      </View>
+    );
+  };
 
   if (isLoading) {
     return (
-      <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
+      <SafeAreaView
+        style={[styles.container, { backgroundColor: theme.colors.background }]}
+      >
         <LoadingSpinner size="large" color={theme.colors.primary} />
       </SafeAreaView>
     );
   }
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
-      <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} />
+    <SafeAreaView
+      style={[styles.container, { backgroundColor: theme.colors.background }]}
+    >
+      <StatusBar
+        barStyle={isDark ? "light-content" : "dark-content"}
+        backgroundColor="transparent"
+        translucent
+      />
       <ScrollView
         ref={scrollViewRef}
         showsVerticalScrollIndicator={false}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={theme.colors.primary} />
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={handleRefresh}
+            tintColor={theme.colors.primary}
+          />
         }
         contentContainerStyle={styles.scrollContent}
       >
         {renderHeader()}
         {renderDidYouKnow()}
-        {renderSurpriseMe()}
-        {renderFrequencyGrid()}
+        {renderTrendingSection()}
+        {renderCategoryButtons()}
+        {renderFrequenciesSection()}
       </ScrollView>
     </SafeAreaView>
   );
@@ -228,276 +517,214 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  statusBarSpacer: {
-    height: Platform.OS === 'ios' ? 0 : 20, // Adaptive status bar spacing
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    gap: 20,
-  },
-  loadingText: {
-    fontSize: 18,
-    fontWeight: '600',
-    letterSpacing: 0.15,
-  },
-  scrollView: {
-    flex: 1,
-  },
   scrollContent: {
-    paddingBottom: 150, // Space for playback bar
+    paddingBottom: 150,
   },
-  
-  // Modern Header Styles
-  header: {
+  headerGradient: {
     paddingHorizontal: 20,
-    paddingVertical: 16,
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
+    paddingVertical: 24,
+    paddingTop: Platform.OS === "android" ? 40 : 24,
+    borderBottomLeftRadius: 32,
+    borderBottomRightRadius: 32,
   },
-  topBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 20,
+  headerContent: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
   },
-  brandSection: {
-    flexDirection: 'row',
-    alignItems: 'center',
+  headerLeft: {
     flex: 1,
+    marginRight: 16,
   },
-  logoContainer: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    overflow: 'hidden',
-    marginRight: 12,
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
-  },
-  logoImage: {
-    width: '100%',
-    height: '100%',
-  },
-  brandContent: {
-    flex: 1,
+  greeting: {
+    fontSize: 13,
+    marginBottom: 4,
+    letterSpacing: 0.5,
+    opacity: 0.8,
   },
   appTitle: {
-    fontSize: 24,
-    fontWeight: '700',
-    letterSpacing: 0.25,
+    fontSize: 32,
+    marginBottom: 6,
+    letterSpacing: 0.2,
   },
-  appSubtitle: {
-    fontSize: 14,
-    fontWeight: '500',
-    opacity: 0.8,
-    letterSpacing: 0.1,
-  },
-  headerActions: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  actionButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    justifyContent: 'center',
-    alignItems: 'center',
-    elevation: 1,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 0.5 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-  },
-  
-  // Quick Access Grid
-  quickAccessGrid: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  quickAccessCard: {
-    flex: 1,
-    alignItems: 'center',
-    paddingVertical: 16,
-    paddingHorizontal: 8,
-    borderRadius: 16,
-    elevation: 1,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 0.5 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-  },
-  quickIconContainer: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  quickAccessText: {
+  tagline: {
     fontSize: 12,
-    fontWeight: '600',
-    textAlign: 'center',
-    letterSpacing: 0.1,
-  },
-  quickAccessEmoji: {
-    fontSize: 16,
-  },
-  
-  // Category Section
-  categorySection: {
-    paddingVertical: 16,
-    elevation: 1,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 0.5 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-  },
-  sectionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    marginBottom: 16,
-  },
-  sectionTitle: {
-    fontSize: 20,
-    fontWeight: '600',
-    letterSpacing: 0.15,
-  },
-  categoryScroll: {
-    paddingHorizontal: 16,
-    gap: 8,
-  },
-  categoryButtonWrapper: {
-    marginRight: 4,
-  },
-  modernCategoryChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderRadius: 16,
-    elevation: 1,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 0.5 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    minHeight: 48,
-  },
-  categoryChipText: {
-    fontSize: 14,
-    fontWeight: '500',
-    letterSpacing: 0.1,
-  },
-  
-  // Content Section
-  contentSection: {
-    paddingHorizontal: 20,
-    paddingTop: 16,
-  },
-  frequenciesGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
-    marginTop: 8,
-  },
-  frequencyCardStyle: {
-    width: (width - 48) / 2, // 2-column grid with proper spacing
-    marginBottom: 16,
-  },
-  
-  // Empty State
-  emptyState: {
-    alignItems: 'center',
-    paddingVertical: 60,
-    paddingHorizontal: 32,
-  },
-  emptyIcon: {
-    fontSize: 48,
-    marginBottom: 16,
-    opacity: 0.6,
-  },
-  emptyTitle: {
-    fontSize: 20,
-    fontWeight: '600',
-    marginBottom: 8,
-    textAlign: 'center',
-    letterSpacing: 0.15,
-  },
-  emptySubtitle: {
-    fontSize: 16,
-    textAlign: 'center',
-    opacity: 0.8,
-    lineHeight: 24,
-    letterSpacing: 0.1,
-  },
-  // New Styles
-  greeting: {
-    fontSize: 14,
-    fontWeight: '500',
-    marginBottom: 4,
+    letterSpacing: 0.3,
+    opacity: 0.7,
   },
   themeButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    justifyContent: 'center',
-    alignItems: 'center',
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    justifyContent: "center",
+    alignItems: "center",
+    overflow: "hidden",
+  },
+  themeButtonGradient: {
+    width: "100%",
+    height: "100%",
+    justifyContent: "center",
+    alignItems: "center",
   },
   factContainer: {
     paddingHorizontal: 20,
+    marginTop: 24,
     marginBottom: 24,
   },
   factCard: {
+    flexDirection: "row",
     padding: 20,
     borderRadius: 24,
-    elevation: 4,
-    shadowColor: '#000',
+    alignItems: "flex-start",
+    elevation: 8,
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
   },
-  factHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 12,
+  factIconContainer: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: "rgba(255, 255, 255, 0.2)",
+    justifyContent: "center",
+    alignItems: "center",
+    marginRight: 16,
+    marginTop: 2,
   },
-  factLabel: {
-    color: 'white',
+  factContent: {
+    flex: 1,
+  },
+  factTitle: {
     fontSize: 16,
-    fontWeight: '700',
-    marginLeft: 8,
+    color: "white",
+    marginBottom: 6,
+    letterSpacing: 0.2,
   },
   factText: {
-    color: 'white',
-    fontSize: 16,
-    lineHeight: 24,
-    fontWeight: '500',
-    opacity: 0.95,
+    fontSize: 13,
+    color: "rgba(255, 255, 255, 0.9)",
+    lineHeight: 20,
+    letterSpacing: 0.25,
   },
   section: {
-    marginBottom: 24,
+    marginBottom: 32,
+  },
+  sectionHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 20,
+    marginBottom: 16,
+    gap: 12,
   },
   sectionTitle: {
-    fontSize: 20,
-    fontWeight: '700',
+    fontSize: 22,
+    letterSpacing: 0.3,
+    flex: 1,
+  },
+  frequencyCount: {
+    fontSize: 14,
+  },
+  categorySection: {
+    marginBottom: 32,
+  },
+  categoryTitle: {
+    fontSize: 18,
+    marginBottom: 12,
+    paddingHorizontal: 20,
+    letterSpacing: 0.3,
+  },
+  categoryScroll: {
+    paddingHorizontal: 16,
+    gap: 10,
+  },
+  categoryButton: {
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 24,
+    marginRight: 8,
+  },
+  categoryButtonText: {
+    fontSize: 13,
+    letterSpacing: 0.3,
+  },
+  trendingScroll: {
+    paddingHorizontal: 16,
+    gap: 12,
+  },
+  trendingCardWrapper: {
+    width: width * 0.85,
+  },
+  trendingCard: {
+    borderRadius: 20,
+    overflow: "hidden",
+    elevation: 6,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.12,
+    shadowRadius: 8,
+  },
+  trendingCardContent: {
+    paddingHorizontal: 20,
+    paddingVertical: 24,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  trendingBadge: {
+    position: "absolute",
+    top: 12,
+    right: 12,
+    backgroundColor: "#FFD700",
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  trendingEmoji: {
+    fontSize: 64,
+    marginBottom: 12,
+  },
+  trendingName: {
+    fontSize: 18,
+    marginBottom: 8,
+    textAlign: "center",
+  },
+  trendingFreq: {
+    fontSize: 16,
     marginBottom: 16,
+    letterSpacing: 0.5,
+  },
+  trendingPlayButton: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    justifyContent: "center",
+    alignItems: "center",
+    elevation: 4,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 6,
+  },
+  frequenciesGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "space-between",
+    paddingHorizontal: 20,
+    gap: 12,
+  },
+  frequencyCardStyle: {
+    width: (width - 52) / 2,
+  },
+  emptyState: {
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 80,
     paddingHorizontal: 20,
   },
-  horizontalScroll: {
-    paddingHorizontal: 16,
-    gap: 16,
-  },
-  horizontalCard: {
-    width: width * 0.7,
+  emptyText: {
+    fontSize: 16,
+    marginTop: 16,
   },
 });

@@ -1,5 +1,5 @@
-import { Audio, InterruptionModeIOS, InterruptionModeAndroid } from 'expo-av';
-import * as Haptics from 'expo-haptics';
+import { Audio, InterruptionModeIOS, InterruptionModeAndroid } from "expo-av";
+import * as Haptics from "expo-haptics";
 
 class FrequencyAudioEngine {
   constructor() {
@@ -23,21 +23,31 @@ class FrequencyAudioEngine {
         interruptionModeAndroid: InterruptionModeAndroid.DoNotMix,
       });
     } catch (error) {
-      console.error('Error setting up audio:', error);
+      console.error("Error setting up audio:", error);
     }
   }
 
-  // Ultra-fast audio generation (minimal processing)
-  generateSineWave(frequency, duration = 0.5, sampleRate = 11025) {
-    const samples = Math.floor(duration * sampleRate);
-    const amplitude = 0.25; // Lower amplitude for faster processing
+  // Ultra-fast audio generation with perfectly seamless looping
+  generateSineWave(frequency, duration = 8.0, sampleRate = 22050) {
+    const amplitude = 0.25; // Constant amplitude for flat output
+    if (!frequency || frequency <= 0) {
+      return new Float32Array(0);
+    }
+
+    // Generate exact integer cycles to ensure perfect phase wrap-around
+    // Key: sample[0] must equal sample[N] for seamless looping at constant amplitude
+    const cycles = Math.max(1, Math.round(duration * frequency));
+    const samples = Math.round((cycles * sampleRate) / frequency);
     const audioData = new Float32Array(samples);
-    
-    const step = 2 * Math.PI * frequency / sampleRate;
+
+    // Generate pure sine wave with exact cycle alignment
+    // Using exact cycle count: phase completes full rotations, so sine(0) = sine(2πN)
+    // This creates a mathematically seamless loop with NO discontinuity
+    const step = (2 * Math.PI * cycles) / samples;
     for (let i = 0; i < samples; i++) {
       audioData[i] = amplitude * Math.sin(step * i);
     }
-    
+
     return audioData;
   }
 
@@ -46,7 +56,7 @@ class FrequencyAudioEngine {
     const length = audioData.length;
     const buffer = new ArrayBuffer(44 + length * 2);
     const view = new DataView(buffer);
-    
+
     // Minimal WAV header
     view.setUint32(0, 0x46464952, true); // "RIFF"
     view.setUint32(4, 36 + length * 2, true);
@@ -61,28 +71,28 @@ class FrequencyAudioEngine {
     view.setUint16(34, 16, true);
     view.setUint32(36, 0x61746164, true); // "data"
     view.setUint32(40, length * 2, true);
-    
+
     // Fast PCM conversion
     let offset = 44;
     for (let i = 0; i < length; i++) {
       view.setInt16(offset, audioData[i] * 32767, true);
       offset += 2;
     }
-    
+
     return buffer;
   }
 
   // Create data URI (ultra-fast base64)
   createAudioURI(wavBuffer) {
     const bytes = new Uint8Array(wavBuffer);
-    let binary = '';
+    let binary = "";
     const chunkSize = 8192;
-    
+
     for (let i = 0; i < bytes.length; i += chunkSize) {
       const chunk = bytes.subarray(i, i + chunkSize);
       binary += String.fromCharCode.apply(null, chunk);
     }
-    
+
     return `data:audio/wav;base64,${btoa(binary)}`;
   }
 
@@ -90,35 +100,38 @@ class FrequencyAudioEngine {
   async playFrequency(frequencyData, options = {}) {
     try {
       // Extract frequency value immediately
-      const frequency = typeof frequencyData === 'object' ? frequencyData.frequency : frequencyData;
-      
+      const frequency =
+        typeof frequencyData === "object"
+          ? frequencyData.frequency
+          : frequencyData;
+
       // Fast stop without delay
       if (this.sound) {
         this.sound.stopAsync().catch(() => {}); // Non-blocking
         this.sound.unloadAsync().catch(() => {}); // Non-blocking
         this.sound = null;
       }
-      
+
       this.currentFrequency = frequency;
       this.isPlaying = false; // Will be set to true when sound starts
 
       let audioURI;
-      
+
       // Check cache first for instant response
       if (this.audioCache.has(frequency)) {
         audioURI = this.audioCache.get(frequency);
       } else {
         // Generate and cache audio data
-        const audioData = this.generateSineWave(frequency, 0.5);
-        const wavBuffer = this.createWavFile(audioData, 11025);
+        const audioData = this.generateSineWave(frequency, 2.0);
+        const wavBuffer = this.createWavFile(audioData, 22050);
         audioURI = this.createAudioURI(wavBuffer);
-        
+
         // Cache for next time (limit cache size)
         if (this.audioCache.size < 50) {
           this.audioCache.set(frequency, audioURI);
         }
       }
-      
+
       // Create and play sound immediately
       const { sound } = await Audio.Sound.createAsync(
         { uri: audioURI },
@@ -126,9 +139,9 @@ class FrequencyAudioEngine {
           shouldPlay: true,
           isLooping: true,
           volume: this.volume,
-        }
+        },
       );
-      
+
       this.sound = sound;
       this.isPlaying = true;
 
@@ -139,9 +152,8 @@ class FrequencyAudioEngine {
           this.currentFrequency = null;
         }
       });
-
     } catch (error) {
-      console.error('Error playing frequency:', error);
+      console.error("Error playing frequency:", error);
       this.isPlaying = false;
       throw error;
     }
@@ -171,10 +183,10 @@ class FrequencyAudioEngine {
         this.sound.unloadAsync().catch(() => {});
         this.sound = null;
       }
-      
+
       this.isPlaying = false;
       this.currentFrequency = null;
-      
+
       if (this.timer) {
         clearTimeout(this.timer);
         this.timer = null;
@@ -201,11 +213,14 @@ class FrequencyAudioEngine {
       clearTimeout(this.timer);
       this.timer = null;
     }
-    
+
     if (minutes > 0) {
-      this.timer = setTimeout(() => {
-        this.stopFrequency();
-      }, minutes * 60 * 1000);
+      this.timer = setTimeout(
+        () => {
+          this.stopFrequency();
+        },
+        minutes * 60 * 1000,
+      );
     }
   }
 
@@ -243,15 +258,28 @@ export const AudioUtils = {
   frequencyToNote(frequency) {
     const A4 = 440;
     const C0 = A4 * Math.pow(2, -4.75);
-    const noteNames = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
-    
+    const noteNames = [
+      "C",
+      "C#",
+      "D",
+      "D#",
+      "E",
+      "F",
+      "F#",
+      "G",
+      "G#",
+      "A",
+      "A#",
+      "B",
+    ];
+
     if (frequency > 0) {
       const h = Math.round(12 * Math.log2(frequency / C0));
       const octave = Math.floor(h / 12);
       const n = h % 12;
       return noteNames[n] + octave;
     }
-    return '';
+    return "";
   },
 
   // Validate frequency range
@@ -262,9 +290,9 @@ export const AudioUtils = {
   // Format frequency for display
   formatFrequency(frequency) {
     if (frequency >= 1000) {
-      return (frequency / 1000).toFixed(1) + 'kHz';
+      return (frequency / 1000).toFixed(1) + "kHz";
     }
-    return frequency + 'Hz';
+    return frequency + "Hz";
   },
 };
 

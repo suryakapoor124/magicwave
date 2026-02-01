@@ -4,11 +4,11 @@
     "slug": "magicwave",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/magicwave.jpg",
+    "icon": "./assets/magicwave.png",
     "userInterfaceStyle": "automatic",
-    "newArchEnabled": false,
+
     "splash": {
-      "image": "./assets/magicwave.jpg",
+      "image": "./assets/magicwave.png",
       "resizeMode": "cover",
       "backgroundColor": "#1A1A1A"
     },
@@ -17,14 +17,12 @@
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/magicwave.jpg",
+        "foregroundImage": "./assets/magicwave.png",
         "backgroundColor": "#1A1A1A"
       },
       "edgeToEdgeEnabled": true,
       "package": "com.meow9lives.magicwave",
-      "permissions": [
-        "android.permission.INTERNET"
-      ],
+      "permissions": ["android.permission.INTERNET"],
       "intentFilters": [
         {
           "action": "VIEW",
@@ -36,15 +34,12 @@
               "scheme": "http"
             }
           ],
-          "category": [
-            "BROWSABLE",
-            "DEFAULT"
-          ]
+          "category": ["BROWSABLE", "DEFAULT"]
         }
       ]
     },
     "web": {
-      "favicon": "./assets/magicwave.jpg"
+      "favicon": "./assets/magicwave.png"
     },
     "extra": {
       "eas": {

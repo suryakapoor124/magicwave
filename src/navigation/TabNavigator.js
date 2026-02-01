@@ -1,13 +1,14 @@
-import React from 'react';
-import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { createStackNavigator } from '@react-navigation/stack';
-import { View, StyleSheet, Platform } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
-import { useTheme } from '../utils/theme';
-import { HomeScreen } from '../screens/HomeScreen';
-import { CategoriesScreen } from '../screens/CategoriesScreen';
-import { CategoryDetailScreen } from '../screens/CategoryDetailScreen';
-import { FavoritesScreen } from '../screens/FavoritesScreen';
+import React from "react";
+import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
+import { createStackNavigator } from "@react-navigation/stack";
+import { View, StyleSheet, Platform } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
+import { useTheme } from "../utils/theme";
+import { HomeScreen } from "../screens/HomeScreen";
+import { CategoriesScreen } from "../screens/CategoriesScreen";
+import { CategoryDetailScreen } from "../screens/CategoryDetailScreen";
+import { FavoritesScreen } from "../screens/FavoritesScreen";
+import { AboutScreen } from "../screens/AboutScreen";
 
 const Tab = createBottomTabNavigator();
 const Stack = createStackNavigator();
@@ -30,10 +31,10 @@ export const TabNavigator = () => {
         headerShown: false,
         tabBarStyle: {
           backgroundColor: theme.colors.surface,
-          borderTopColor: theme.colors.outline + '20',
+          borderTopColor: theme.colors.outline + "20",
           borderTopWidth: 1,
-          height: Platform.OS === 'ios' ? 85 : 65,
-          paddingBottom: Platform.OS === 'ios' ? 30 : 10,
+          height: Platform.OS === "ios" ? 85 : 65,
+          paddingBottom: Platform.OS === "ios" ? 30 : 10,
           paddingTop: 10,
           elevation: 0,
         },
@@ -47,10 +48,10 @@ export const TabNavigator = () => {
         component={HomeScreen}
         options={{
           tabBarIcon: ({ color, size, focused }) => (
-            <Ionicons 
-              name={focused ? 'home' : 'home-outline'} 
-              size={28} 
-              color={color} 
+            <Ionicons
+              name={focused ? "home" : "home-outline"}
+              size={28}
+              color={color}
             />
           ),
         }}
@@ -60,10 +61,10 @@ export const TabNavigator = () => {
         component={CategoriesStack}
         options={{
           tabBarIcon: ({ color, size, focused }) => (
-            <Ionicons 
-              name={focused ? 'grid' : 'grid-outline'} 
-              size={28} 
-              color={color} 
+            <Ionicons
+              name={focused ? "grid" : "grid-outline"}
+              size={28}
+              color={color}
             />
           ),
         }}
@@ -73,10 +74,23 @@ export const TabNavigator = () => {
         component={FavoritesScreen}
         options={{
           tabBarIcon: ({ color, size, focused }) => (
-            <Ionicons 
-              name={focused ? 'heart' : 'heart-outline'} 
-              size={28} 
-              color={color} 
+            <Ionicons
+              name={focused ? "heart" : "heart-outline"}
+              size={28}
+              color={color}
+            />
+          ),
+        }}
+      />
+      <Tab.Screen
+        name="AboutTab"
+        component={AboutScreen}
+        options={{
+          tabBarIcon: ({ color, size, focused }) => (
+            <Ionicons
+              name={focused ? "person" : "person-outline"}
+              size={28}
+              color={color}
             />
           ),
         }}

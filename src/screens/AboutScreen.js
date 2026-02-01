@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from "react";
 import {
   View,
   Text,
@@ -8,388 +8,635 @@ import {
   TouchableOpacity,
   Linking,
   ScrollView,
-  Alert,
   Dimensions,
-  Image,
-} from 'react-native';
-import * as Clipboard from 'expo-clipboard';
-import { LinearGradient } from 'expo-linear-gradient';
-import { Ionicons } from '@expo/vector-icons';
-import { useTheme } from '../utils/theme';
-import { AnimatedCard, BouncyButton } from '../components/Animated';
+  Platform,
+} from "react-native";
+import { LinearGradient } from "expo-linear-gradient";
+import { Ionicons } from "@expo/vector-icons";
+import { useTheme, fontFamilies } from "../utils/theme";
 
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
+const { width } = Dimensions.get("window");
 
 export const AboutScreen = ({ navigation }) => {
   const { theme, isDark, toggleTheme } = useTheme();
+  const [selectedLink, setSelectedLink] = useState(null);
 
-  const openLink = async (url, platform, appUrl = null) => {
-    try {
-      console.log(`Attempting to open ${platform} link: ${url}`);
-      
-      // For Instagram, try app first, then browser
-      if (platform === 'Instagram' && appUrl) {
-        try {
-          const canOpenApp = await Linking.canOpenURL(appUrl);
-          console.log(`Can open Instagram app: ${canOpenApp}`);
-          
-          if (canOpenApp) {
-            await Linking.openURL(appUrl);
-            console.log('Successfully opened Instagram app');
-            return;
-          }
-        } catch (appError) {
-          console.log('Instagram app failed, trying browser');
-        }
-      }
-      
-      // Check if we can open the URL
-      const canOpen = await Linking.canOpenURL(url);
-      console.log(`Can open ${url}: ${canOpen}`);
-      
-      if (canOpen) {
-        await Linking.openURL(url);
-        console.log(`Successfully opened ${platform} link`);
-      } else {
-        // If we can't open the URL directly, try opening with intent on Android
-        if (platform === 'Browser' || platform === 'Buy Me a Coffee' || platform === 'LinkedIn' || platform === 'GitHub' || platform === 'Instagram') {
-          // For web links, try opening with browser intent
-          const browserUrl = `intent://${url.replace('https://', '').replace('http://', '')}#Intent;scheme=https;package=com.android.chrome;end`;
-          try {
-            await Linking.openURL(browserUrl);
-            console.log(`Opened ${platform} with browser intent`);
-            return;
-          } catch (intentError) {
-            console.log('Browser intent failed, trying default browser');
-          }
-        }
-        
-        // If all else fails, show an alert with copy option
-        Alert.alert(
-          `Open ${platform}`,
-          `Unable to open link automatically. Would you like to copy the URL?`,
-          [
-            { 
-              text: 'Copy Link', 
-              onPress: async () => {
-                await Clipboard.setStringAsync(url);
-                Alert.alert('Link Copied', 'The link has been copied to your clipboard. You can paste it in your browser.');
-              }
-            },
-            { text: 'Cancel', style: 'cancel' }
-          ]
-        );
-      }
-    } catch (error) {
-      console.error(`Error opening ${platform} link:`, error);
-      // Show copy option as fallback
-      Alert.alert(
-        'Link Error',
-        `Unable to open link. Would you like to copy the URL?`,
-        [
-          { 
-            text: 'Copy Link', 
-            onPress: async () => {
-              await Clipboard.setStringAsync(url);
-              Alert.alert('Link Copied', 'The link has been copied to your clipboard.');
-            }
-          },
-          { text: 'Cancel', style: 'cancel' }
-        ]
-      );
-    }
+  const appInfo = {
+    name: "MagicWave",
+    version: "1.2.0",
+    description:
+      "MagicWave works in frequencies, not words. Designed to bring focus, balance, and quiet..",
+  };
+
+  const developer = {
+    name: "Suryansh Kapoor",
+    title: "I am Studing Computer Science",
+    bio: "I use Arch BTW",
+    image: "🐱",
   };
 
   const socialLinks = [
     {
-      id: 'coffee',
-      name: 'Buy Me a Coffee',
-      icon: 'cafe-outline',
-      url: 'https://coff.ee/suryanshkapoor',
-      color: '#FF813F',
-      gradient: ['#FF813F', '#FF6B35'],
-      description: 'Support the development',
-      subtitle: 'Help keep MagicWave growing',
+      id: "instagram",
+      icon: "logo-instagram",
+      label: "Instagram",
+      url: "https://www.instagram.com/isuryanshkapoor/",
+      appUrl:
+        Platform.OS === "android"
+          ? "instagram://user/isuryanshkapoor/"
+          : "instagram://user?username=isuryanshkapoor",
+      color: "#E4405F",
     },
     {
-      id: 'instagram',
-      name: 'Instagram',
-      icon: 'logo-instagram',
-      url: 'https://www.instagram.com/isuryanshkapoor/',
-      appUrl: 'instagram://user?username=isuryanshkapoor',
-      color: '#E4405F',
-      gradient: ['#E4405F', '#C13584', '#833AB4'],
-      description: 'Follow my journey',
-      subtitle: 'Behind-the-scenes content',
+      id: "github",
+      icon: "logo-github",
+      label: "GitHub",
+      url: "https://github.com/suryakapoor124",
+      appUrl:
+        Platform.OS === "android"
+          ? "https://github.com/suryakapoor124"
+          : "https://github.com/suryakapoor124",
+      color: "#333333",
     },
     {
-      id: 'linkedin',
-      name: 'LinkedIn',
-      icon: 'logo-linkedin',
-      url: 'https://www.linkedin.com/in/suryansh-kapoor-710807257',
-      color: '#0A66C2',
-      gradient: ['#0A66C2', '#004182'],
-      description: 'Professional network',
-      subtitle: 'Connect and collaborate',
-    },
-    {
-      id: 'github',
-      name: 'GitHub',
-      icon: 'logo-github',
-      url: 'https://github.com/suryakapoor124',
-      color: isDark ? '#f0f6fc' : '#24292f',
-      gradient: isDark ? ['#f0f6fc', '#c9d1d9'] : ['#24292f', '#57606a'],
-      description: 'Open source projects',
-      subtitle: 'Code and contributions',
+      id: "linkedin",
+      icon: "logo-linkedin",
+      label: "LinkedIn",
+      url: "https://www.linkedin.com/in/suryansh-kapoor-710807257/",
+      appUrl:
+        Platform.OS === "android"
+          ? "linkedin://profile/suryansh-kapoor-710807257"
+          : "linkedin://profile/suryansh-kapoor-710807257",
+      color: "#0A66C2",
     },
   ];
 
   const features = [
-    'Binaural beats for deep relaxation',
-    'Solfeggio frequencies for healing',
-    'Meditation enhancement tones',
-    'Customizable frequency therapy',
-    'Beautiful, modern interface',
-    'Multiple frequency categories',
+    {
+      icon: "musical-notes",
+      title: "Healing Frequencies",
+      description:
+        "Access a curated collection of scientifically-backed healing frequencies",
+    },
+    {
+      icon: "brain",
+      title: "Brain Entrainment",
+      description:
+        "Use binaural beats to synchronize your brainwaves for optimal states",
+    },
+    {
+      icon: "moon",
+      title: "Sleep Enhancement",
+      description:
+        "Delta wave frequencies designed for deep, restorative sleep",
+    },
+    {
+      icon: "sparkles",
+      title: "Wellness",
+      description:
+        "Ancient frequencies combined with modern science for holistic healing",
+    },
   ];
 
-  return (
-    <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
-      <StatusBar 
-        barStyle={isDark ? 'light-content' : 'dark-content'} 
-        backgroundColor={theme.colors.background} 
-      />
-      
-      {/* Status bar spacer */}
-      <View style={styles.statusBarSpacer} />
-      
-      {/* Modern Header */}
-      <LinearGradient
-        colors={[theme.colors.primary + '15', theme.colors.background]}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 0, y: 1 }}
-        style={styles.headerGradient}
-      >
-        <View style={styles.header}>
-          <TouchableOpacity 
-            onPress={() => navigation.goBack()}
-            style={[styles.headerButton, { backgroundColor: theme.colors.surfaceContainerHigh }]}
-          >
-            <Ionicons name="arrow-back" size={24} color={theme.colors.onSurface} />
-          </TouchableOpacity>
-          
-          <View style={styles.headerContent}>
-            <Text style={[styles.headerTitle, { color: theme.colors.onSurface }]}>
-              About
-            </Text>
-            <Text style={[styles.headerSubtitle, { color: theme.colors.onSurfaceVariant }]}>
-              MagicWave v1.0.0
-            </Text>
-          </View>
-          
-          <TouchableOpacity 
-            onPress={toggleTheme}
-            style={[styles.headerButton, { backgroundColor: theme.colors.surfaceContainerHigh }]}
-          >
-            <Ionicons 
-              name={isDark ? 'sunny' : 'moon'} 
-              size={24} 
-              color={theme.colors.onSurface} 
-            />
-          </TouchableOpacity>
-        </View>
-      </LinearGradient>
+  const handleOpenLink = async (link) => {
+    try {
+      setSelectedLink(link.id);
 
-      <ScrollView 
-        style={styles.content} 
+      // Try app URL first on Android
+      if (Platform.OS === "android" && link.appUrl && link.id !== "github") {
+        try {
+          const supported = await Linking.canOpenURL(link.appUrl);
+          if (supported) {
+            await Linking.openURL(link.appUrl);
+            return;
+          }
+        } catch (appError) {
+          console.log(`App URL failed for ${link.id}, trying web URL`);
+        }
+      }
+
+      // Fallback to web URL
+      const supported = await Linking.canOpenURL(link.url);
+      if (supported) {
+        await Linking.openURL(link.url);
+      }
+    } catch (error) {
+      console.error(`Error opening ${link.label}:`, error);
+    } finally {
+      setSelectedLink(null);
+    }
+  };
+
+  return (
+    <SafeAreaView
+      style={[styles.container, { backgroundColor: theme.colors.background }]}
+    >
+      <StatusBar
+        barStyle={isDark ? "light-content" : "dark-content"}
+        backgroundColor="transparent"
+        translucent
+      />
+
+      <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
       >
-        {/* Hero Section */}
-        <View style={[styles.heroSection, { backgroundColor: theme.colors.surface }]}>
-          <LinearGradient
-            colors={[theme.colors.primary, theme.colors.secondary]}
-            style={styles.heroGradient}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-          >
-            <View style={styles.heroContent}>
-              <View style={styles.heroLogoContainer}>
-                <Image
-                  source={require('../../assets/magicwave.jpg')}
-                  style={styles.heroLogo}
-                  resizeMode="cover"
-                />
-              </View>
-              <Text style={styles.heroTitle}>MagicWave</Text>
-              <Text style={styles.heroDescription}>
-                Frequency therapy reimagined for modern wellness
-              </Text>
-            </View>
-          </LinearGradient>
-        </View>
+        {/* Header */}
+        <LinearGradient
+          colors={[theme.colors.primary + "20", theme.colors.secondary + "10"]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={styles.headerGradient}
+        >
+          <View style={styles.header}>
+            <TouchableOpacity
+              onPress={() => navigation.goBack()}
+              style={[
+                styles.backButton,
+                {
+                  backgroundColor: theme.colors.surfaceContainer,
+                  borderColor: theme.colors.primary + "30",
+                  borderWidth: 1.5,
+                },
+              ]}
+            >
+              <Ionicons
+                name="arrow-back"
+                size={24}
+                color={theme.colors.onSurface}
+              />
+            </TouchableOpacity>
 
-        <View style={styles.featuresGrid}>
-          <View style={[styles.featureCard, { backgroundColor: theme.colors.surface }]}>
-            <View style={[styles.featureIcon, { backgroundColor: theme.colors.primary + '20' }]}>
-              <Ionicons name="musical-notes" size={28} color={theme.colors.primary} />
-            </View>
-            <Text style={[styles.featureTitle, { color: theme.colors.onSurface }]}>
-              Pure Frequencies
-            </Text>
-            <Text style={[styles.featureDesc, { color: theme.colors.onSurfaceVariant }]}>
-              Real-time generated healing tones
-            </Text>
-          </View>
-
-          <View style={[styles.featureCard, { backgroundColor: theme.colors.surface }]}>
-            <View style={[styles.featureIcon, { backgroundColor: theme.colors.secondary + '20' }]}>
-              <Ionicons name="timer-outline" size={28} color={theme.colors.secondary} />
-            </View>
-            <Text style={[styles.featureTitle, { color: theme.colors.onSurface }]}>
-              Sleep Timer
-            </Text>
-            <Text style={[styles.featureDesc, { color: theme.colors.onSurfaceVariant }]}>
-              Auto-stop for peaceful rest
-            </Text>
-          </View>
-
-          <View style={[styles.featureCard, { backgroundColor: theme.colors.surface }]}>
-            <View style={[styles.featureIcon, { backgroundColor: theme.colors.tertiary + '20' }]}>
-              <Ionicons name="heart-outline" size={28} color={theme.colors.tertiary} />
-            </View>
-            <Text style={[styles.featureTitle, { color: theme.colors.onSurface }]}>
-              Favorites
-            </Text>
-            <Text style={[styles.featureDesc, { color: theme.colors.onSurfaceVariant }]}>
-              Save your healing sounds
-            </Text>
-          </View>
-
-          <View style={[styles.featureCard, { backgroundColor: theme.colors.surface }]}>
-            <View style={[styles.featureIcon, { backgroundColor: theme.colors.accent + '20' }]}>
-              <Ionicons name="color-palette-outline" size={28} color={theme.colors.accent} />
-            </View>
-            <Text style={[styles.featureTitle, { color: theme.colors.onSurface }]}>
-              Themes
-            </Text>
-            <Text style={[styles.featureDesc, { color: theme.colors.onSurfaceVariant }]}>
-              Light and dark modes
-            </Text>
-          </View>
-        </View>
-
-        {/* Developer Profile */}
-        <View style={[styles.profileSection, { backgroundColor: theme.colors.surface }]}>
-          <View style={styles.profileHeader}>
-            <View style={[styles.profileAvatar, { backgroundColor: theme.colors.primary }]}>
-              <Text style={styles.profileInitials}>SK</Text>
-            </View>
-            <View style={styles.profileInfo}>
-              <Text style={[styles.profileName, { color: theme.colors.onSurface }]}>
-                Suryansh Kapoor
-              </Text>
-              <Text style={[styles.profileTitle, { color: theme.colors.onSurfaceVariant }]}>
-                
-              </Text>
-              <Text style={[styles.profileLocation, { color: theme.colors.onSurfaceVariant }]}>
-                🫧
-              </Text>
-            </View>
-          </View>
-          <Text style={[styles.profileBio, { color: theme.colors.onSurfaceVariant }]}>
-            There is no place like http://127.0.0.1
-          </Text>
-        </View>
-
-        {/* Social Links - Professional Grid */}
-        <View style={[styles.socialSection, { backgroundColor: theme.colors.surface }]}>
-          <Text style={[styles.sectionTitle, { color: theme.colors.onSurface }]}>
-            Connect & Support
-          </Text>
-          <View style={styles.socialGrid}>
-            {socialLinks.map((social, index) => (
-              <TouchableOpacity
-                key={social.id}
-                onPress={() => openLink(social.url, social.name, social.appUrl)}
+            <View style={styles.headerContent}>
+              <Text
                 style={[
-                  styles.socialCard,
-                  { backgroundColor: theme.colors.surfaceContainer }
+                  styles.headerTitle,
+                  {
+                    color: theme.colors.primary,
+                    fontFamily: fontFamilies.bold,
+                  },
                 ]}
-                activeOpacity={0.8}
               >
-                <LinearGradient
-                  colors={social.gradient}
-                  style={styles.socialIconGradient}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 1 }}
+                About MagicWave
+              </Text>
+              <Text
+                style={[
+                  styles.headerSubtitle,
+                  {
+                    color: theme.colors.onSurfaceVariant,
+                    fontFamily: fontFamilies.regular,
+                  },
+                ]}
+              >
+                Version {appInfo.version}
+              </Text>
+            </View>
+
+            <TouchableOpacity
+              onPress={toggleTheme}
+              style={[
+                styles.themeButton,
+                {
+                  backgroundColor: theme.colors.surfaceContainer,
+                  borderColor: theme.colors.primary + "30",
+                  borderWidth: 1.5,
+                },
+              ]}
+            >
+              <Ionicons
+                name={isDark ? "sunny" : "moon"}
+                size={20}
+                color={theme.colors.primary}
+              />
+            </TouchableOpacity>
+          </View>
+        </LinearGradient>
+
+        {/* App Description */}
+        <LinearGradient
+          colors={[theme.colors.primary + "15", theme.colors.secondary + "08"]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={[
+            styles.descriptionCard,
+            {
+              borderColor: theme.colors.primary + "30",
+              borderWidth: 1,
+            },
+          ]}
+        >
+          <Text
+            style={[
+              styles.appName,
+              {
+                color: theme.colors.primary,
+                fontFamily: fontFamilies.bold,
+              },
+            ]}
+          >
+            {appInfo.name}
+          </Text>
+          <Text
+            style={[
+              styles.description,
+              {
+                color: theme.colors.onSurface,
+                fontFamily: fontFamilies.regular,
+              },
+            ]}
+          >
+            {appInfo.description}
+          </Text>
+        </LinearGradient>
+
+        {/* Features */}
+        <View style={styles.section}>
+          <Text
+            style={[
+              styles.sectionTitle,
+              {
+                color: theme.colors.onSurface,
+                fontFamily: fontFamilies.bold,
+              },
+            ]}
+          >
+            Key Features
+          </Text>
+
+          <View style={styles.featuresGrid}>
+            {features.map((feature, index) => (
+              <LinearGradient
+                key={index}
+                colors={[
+                  theme.colors.surfaceContainer,
+                  theme.colors.surfaceContainerHigh,
+                ]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={[
+                  styles.featureCard,
+                  {
+                    borderColor: theme.colors.primary + "20",
+                    borderWidth: 1,
+                  },
+                ]}
+              >
+                <View
+                  style={[
+                    styles.featureIconContainer,
+                    { backgroundColor: theme.colors.primary + "15" },
+                  ]}
                 >
-                  <Ionicons name={social.icon} size={20} color="white" />
-                </LinearGradient>
-                <View style={styles.socialContent}>
-                  <Text style={[styles.socialName, { color: theme.colors.onSurface }]}>
-                    {social.name}
-                  </Text>
-                  <Text style={[styles.socialDesc, { color: theme.colors.onSurfaceVariant }]}>
-                    {social.description}
-                  </Text>
-                  <Text style={[styles.socialSubtitle, { color: theme.colors.onSurfaceVariant }]}>
-                    {social.subtitle}
-                  </Text>
+                  <Ionicons
+                    name={feature.icon}
+                    size={24}
+                    color={theme.colors.primary}
+                  />
                 </View>
-                <View style={[styles.socialArrow, { backgroundColor: theme.colors.outline + '20' }]}>
-                  <Ionicons name="chevron-forward" size={16} color={theme.colors.onSurfaceVariant} />
-                </View>
-              </TouchableOpacity>
+                <Text
+                  style={[
+                    styles.featureTitle,
+                    {
+                      color: theme.colors.onSurface,
+                      fontFamily: fontFamilies.bold,
+                    },
+                  ]}
+                >
+                  {feature.title}
+                </Text>
+                <Text
+                  style={[
+                    styles.featureDescription,
+                    {
+                      color: theme.colors.onSurfaceVariant,
+                      fontFamily: fontFamilies.regular,
+                    },
+                  ]}
+                >
+                  {feature.description}
+                </Text>
+              </LinearGradient>
             ))}
           </View>
         </View>
 
-        {/* App Info */}
-        <View style={[styles.infoSection, { backgroundColor: theme.colors.surface }]}>
-          <View style={styles.infoGrid}>
-            <View style={styles.infoItem}>
-              <Text style={[styles.infoLabel, { color: theme.colors.onSurfaceVariant }]}>
-                Version
+        {/* Developer Section */}
+        <View style={styles.section}>
+          <Text
+            style={[
+              styles.sectionTitle,
+              {
+                color: theme.colors.onSurface,
+                fontFamily: fontFamilies.bold,
+              },
+            ]}
+          >
+            Meet the Developer
+          </Text>
+
+          <LinearGradient
+            colors={[
+              theme.colors.primary + "20",
+              theme.colors.secondary + "10",
+            ]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={[
+              styles.developerCard,
+              {
+                borderColor: theme.colors.primary + "30",
+                borderWidth: 1.5,
+              },
+            ]}
+          >
+            <View style={styles.developerHeader}>
+              <Text
+                style={[
+                  styles.developerImage,
+                  { fontFamily: fontFamilies.regular },
+                ]}
+              >
+                {developer.image}
               </Text>
-              <Text style={[styles.infoValue, { color: theme.colors.onSurface }]}>
-                1.0.1
+              <View style={{ flex: 1 }}>
+                <Text
+                  style={[
+                    styles.developerName,
+                    {
+                      color: theme.colors.onSurface,
+                      fontFamily: fontFamilies.bold,
+                    },
+                  ]}
+                >
+                  {developer.name}
+                </Text>
+                <Text
+                  style={[
+                    styles.developerTitle,
+                    {
+                      color: theme.colors.primary,
+                      fontFamily: fontFamilies.medium,
+                    },
+                  ]}
+                >
+                  {developer.title}
+                </Text>
+              </View>
+            </View>
+
+            <Text
+              style={[
+                styles.developerBio,
+                {
+                  color: theme.colors.onSurface,
+                  fontFamily: fontFamilies.regular,
+                },
+              ]}
+            >
+              {developer.bio}
+            </Text>
+
+            {/* Social Links */}
+            <View style={styles.socialContainer}>
+              {socialLinks.map((link) => (
+                <TouchableOpacity
+                  key={link.id}
+                  onPress={() => handleOpenLink(link)}
+                  activeOpacity={0.7}
+                  style={[
+                    styles.socialButton,
+                    {
+                      backgroundColor: theme.colors.surfaceContainer,
+                      borderColor: link.color + "30",
+                      borderWidth: 1.5,
+                      transform: [
+                        {
+                          scale: selectedLink === link.id ? 0.95 : 1,
+                        },
+                      ],
+                    },
+                  ]}
+                >
+                  <Ionicons name={link.icon} size={28} color={link.color} />
+                  <Text
+                    style={[
+                      styles.socialLabel,
+                      {
+                        color: link.color,
+                        fontFamily: fontFamilies.medium,
+                      },
+                    ]}
+                  >
+                    {link.label}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </LinearGradient>
+        </View>
+
+        {/* App Info */}
+        <View style={styles.section}>
+          <Text
+            style={[
+              styles.sectionTitle,
+              {
+                color: theme.colors.onSurface,
+                fontFamily: fontFamilies.bold,
+              },
+            ]}
+          >
+            App Information
+          </Text>
+
+          <View
+            style={[
+              styles.infoCard,
+              {
+                backgroundColor: theme.colors.surfaceContainer,
+                borderColor: theme.colors.primary + "20",
+                borderWidth: 1,
+              },
+            ]}
+          >
+            <View style={styles.infoRow}>
+              <Text
+                style={[
+                  styles.infoLabel,
+                  {
+                    color: theme.colors.onSurfaceVariant,
+                    fontFamily: fontFamilies.medium,
+                  },
+                ]}
+              >
+                Application
+              </Text>
+              <Text
+                style={[
+                  styles.infoValue,
+                  {
+                    color: theme.colors.onSurface,
+                    fontFamily: fontFamilies.regular,
+                  },
+                ]}
+              >
+                {appInfo.name}
               </Text>
             </View>
-            <View style={styles.infoItem}>
-              <Text style={[styles.infoLabel, { color: theme.colors.onSurfaceVariant }]}>
+
+            <View
+              style={[
+                styles.divider,
+                { backgroundColor: theme.colors.outline + "20" },
+              ]}
+            />
+
+            <View style={styles.infoRow}>
+              <Text
+                style={[
+                  styles.infoLabel,
+                  {
+                    color: theme.colors.onSurfaceVariant,
+                    fontFamily: fontFamilies.medium,
+                  },
+                ]}
+              >
+                Version
+              </Text>
+              <Text
+                style={[
+                  styles.infoValue,
+                  {
+                    color: theme.colors.onSurface,
+                    fontFamily: fontFamilies.regular,
+                  },
+                ]}
+              >
+                {appInfo.version}
+              </Text>
+            </View>
+
+            <View
+              style={[
+                styles.divider,
+                { backgroundColor: theme.colors.outline + "20" },
+              ]}
+            />
+
+            <View style={styles.infoRow}>
+              <Text
+                style={[
+                  styles.infoLabel,
+                  {
+                    color: theme.colors.onSurfaceVariant,
+                    fontFamily: fontFamilies.medium,
+                  },
+                ]}
+              >
                 Platform
               </Text>
-              <Text style={[styles.infoValue, { color: theme.colors.onSurface }]}>
+              <Text
+                style={[
+                  styles.infoValue,
+                  {
+                    color: theme.colors.onSurface,
+                    fontFamily: fontFamilies.regular,
+                  },
+                ]}
+              >
                 React Native
               </Text>
             </View>
-            <View style={styles.infoItem}>
-              <Text style={[styles.infoLabel, { color: theme.colors.onSurfaceVariant }]}>
-                Framework
+
+            <View
+              style={[
+                styles.divider,
+                { backgroundColor: theme.colors.outline + "20" },
+              ]}
+            />
+
+            <View style={styles.infoRow}>
+              <Text
+                style={[
+                  styles.infoLabel,
+                  {
+                    color: theme.colors.onSurfaceVariant,
+                    fontFamily: fontFamilies.medium,
+                  },
+                ]}
+              >
+                Status
               </Text>
-              <Text style={[styles.infoValue, { color: theme.colors.onSurface }]}>
-                Expo SDK 51
-              </Text>
-            </View>
-            <View style={styles.infoItem}>
-              <Text style={[styles.infoLabel, { color: theme.colors.onSurfaceVariant }]}>
-                License
-              </Text>
-              <Text style={[styles.infoValue, { color: theme.colors.onSurface }]}>
-                GPL-3.0
-              </Text>
+              <View
+                style={[
+                  styles.statusBadge,
+                  { backgroundColor: theme.colors.secondary + "20" },
+                ]}
+              >
+                <View
+                  style={[
+                    styles.statusDot,
+                    { backgroundColor: theme.colors.secondary },
+                  ]}
+                />
+                <Text
+                  style={[
+                    styles.statusText,
+                    {
+                      color: theme.colors.secondary,
+                      fontFamily: fontFamilies.medium,
+                    },
+                  ]}
+                >
+                  Active
+                </Text>
+              </View>
             </View>
           </View>
         </View>
 
         {/* Footer */}
-        <View style={styles.footer}>
-          <Text style={[styles.footerText, { color: theme.colors.onSurfaceVariant }]}>
-            Made with ❤️ for wellness and mindfulness
+        <View
+          style={[
+            styles.footer,
+            {
+              backgroundColor: theme.colors.primary + "10",
+              borderTopColor: theme.colors.primary + "20",
+              borderTopWidth: 1,
+            },
+          ]}
+        >
+          <Text
+            style={[
+              styles.footerText,
+              {
+                color: theme.colors.onSurfaceVariant,
+                fontFamily: fontFamilies.regular,
+              },
+            ]}
+          >
+            Made with 💜 by{" "}
+            <Text
+              style={[
+                {
+                  color: theme.colors.primary,
+                  fontFamily: fontFamilies.bold,
+                },
+              ]}
+            >
+              Suryansh Kapoor
+            </Text>
           </Text>
-          <Text style={[styles.footerCopy, { color: theme.colors.onSurfaceVariant }]}>
-            © 2025 MagicWave. All rights reserved.
+          <Text
+            style={[
+              styles.footerSubtext,
+              {
+                color: theme.colors.onSurfaceVariant,
+                fontFamily: fontFamilies.regular,
+              },
+            ]}
+          >
+            Bringing harmony through frequency and technology
           </Text>
         </View>
       </ScrollView>
@@ -401,316 +648,237 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  statusBarSpacer: {
-    height: 20, // Extra space for status bar
-  },
-  headerGradient: {
-    borderBottomLeftRadius: 32,
-    borderBottomRightRadius: 32,
-    marginBottom: 20,
-    elevation: 4,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-  },
-  headerButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  headerContent: {
-    flex: 1,
-    alignItems: 'center',
-  },
-  headerTitle: {
-    fontSize: 22,
-    fontWeight: '600',
-    letterSpacing: 0.15,
-  },
-  headerSubtitle: {
-    fontSize: 14,
-    marginTop: 2,
-    opacity: 0.7,
-  },
-  content: {
-    flex: 1,
-  },
   scrollContent: {
     paddingBottom: 40,
   },
-  
-  // Hero Section - Google-style hero
-  heroSection: {
-    margin: 20,
-    borderRadius: 28,
-    overflow: 'hidden',
+  headerGradient: {
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    paddingTop: Platform.OS === "android" ? 40 : 16,
+    borderBottomLeftRadius: 28,
+    borderBottomRightRadius: 28,
+    marginBottom: 24,
+  },
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  backButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  headerContent: {
+    flex: 1,
+    marginHorizontal: 12,
+  },
+  headerTitle: {
+    fontSize: 28,
+    marginBottom: 4,
+    letterSpacing: 0.3,
+  },
+  headerSubtitle: {
+    fontSize: 12,
+    letterSpacing: 0.5,
+    opacity: 0.7,
+  },
+  themeButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  descriptionCard: {
+    marginHorizontal: 20,
+    padding: 20,
+    borderRadius: 24,
+    marginBottom: 24,
     elevation: 4,
-    shadowColor: '#000',
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.15,
+    shadowOpacity: 0.1,
     shadowRadius: 8,
   },
-  heroGradient: {
-    padding: 40,
-    alignItems: 'center',
-  },
-  heroContent: {
-    alignItems: 'center',
-  },
-  heroLogoContainer: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    marginBottom: 16,
-    overflow: 'hidden',
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    borderWidth: 3,
-    borderColor: 'rgba(255, 255, 255, 0.3)',
-  },
-  heroLogo: {
-    width: '100%',
-    height: '100%',
-  },
-  heroTitle: {
-    fontSize: 32,
-    fontWeight: '700',
-    color: 'white',
-    marginBottom: 8,
-    letterSpacing: 0.25,
-  },
-  heroDescription: {
-    fontSize: 16,
-    color: 'white',
-    opacity: 0.9,
-    textAlign: 'center',
-    lineHeight: 24,
-    letterSpacing: 0.15,
-  },
-
-  // Features Grid - Material Design cards
-  featuresGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    paddingHorizontal: 12,
-    marginBottom: 8,
-  },
-  featureCard: {
-    width: (SCREEN_WIDTH - 56) / 2,
-    margin: 8,
-    padding: 20,
-    borderRadius: 20,
-    alignItems: 'center',
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-  },
-  featureIcon: {
-    width: 56,
-    height: 56,
-    borderRadius: 28, // Exactly half of width/height for perfect circle
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 16,
-    overflow: 'hidden', // This ensures perfect circular clipping
-    elevation: 1,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.08,
-    shadowRadius: 2,
-  },
-  featureTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    marginBottom: 4,
-    textAlign: 'center',
-    letterSpacing: 0.15,
-  },
-  featureDesc: {
-    fontSize: 14,
-    textAlign: 'center',
-    lineHeight: 20,
-    opacity: 0.8,
-  },
-
-  // Profile Section - Professional layout
-  profileSection: {
-    margin: 20,
-    padding: 24,
-    borderRadius: 20,
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-  },
-  profileHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  profileAvatar: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 16,
-  },
-  profileInitials: {
+  appName: {
     fontSize: 24,
-    fontWeight: '700',
-    color: 'white',
+    marginBottom: 12,
+    letterSpacing: 0.5,
   },
-  profileInfo: {
-    flex: 1,
-  },
-  profileName: {
-    fontSize: 20,
-    fontWeight: '600',
-    marginBottom: 2,
-    letterSpacing: 0.15,
-  },
-  profileTitle: {
-    fontSize: 16,
-    marginBottom: 2,
-    opacity: 0.8,
-  },
-  profileLocation: {
+  description: {
     fontSize: 14,
-    opacity: 0.7,
-  },
-  profileBio: {
-    fontSize: 15,
     lineHeight: 22,
-    opacity: 0.8,
-    letterSpacing: 0.1,
+    letterSpacing: 0.25,
+    opacity: 0.9,
   },
-
-  // Social Section - Modern grid layout
-  socialSection: {
-    margin: 20,
-    padding: 24,
-    borderRadius: 20,
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
+  section: {
+    paddingHorizontal: 20,
+    marginBottom: 28,
   },
   sectionTitle: {
-    fontSize: 22,
-    fontWeight: '600',
-    marginBottom: 20,
-    letterSpacing: 0.15,
+    fontSize: 20,
+    marginBottom: 16,
+    letterSpacing: 0.3,
   },
-  socialGrid: {
+  featuresGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "space-between",
     gap: 12,
   },
-  socialCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
+  featureCard: {
+    width: (width - 52) / 2,
     padding: 16,
-    borderRadius: 16,
-    elevation: 1,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 0.5 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-  },
-  socialIconGradient: {
-    width: 40,
-    height: 40,
     borderRadius: 20,
-    justifyContent: 'center',
-    alignItems: 'center',
+    alignItems: "center",
+    elevation: 3,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 6,
+  },
+  featureIconContainer: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 12,
+  },
+  featureTitle: {
+    fontSize: 14,
+    marginBottom: 8,
+    textAlign: "center",
+    letterSpacing: 0.2,
+  },
+  featureDescription: {
+    fontSize: 11,
+    textAlign: "center",
+    lineHeight: 16,
+    letterSpacing: 0.2,
+    opacity: 0.8,
+  },
+  developerCard: {
+    padding: 24,
+    borderRadius: 24,
+    elevation: 6,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.12,
+    shadowRadius: 12,
+  },
+  developerHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 16,
+  },
+  developerImage: {
+    fontSize: 56,
     marginRight: 16,
   },
-  socialContent: {
+  developerName: {
+    fontSize: 20,
+    marginBottom: 4,
+    letterSpacing: 0.3,
+  },
+  developerTitle: {
+    fontSize: 13,
+    letterSpacing: 0.2,
+  },
+  developerBio: {
+    fontSize: 13,
+    lineHeight: 20,
+    marginBottom: 20,
+    letterSpacing: 0.25,
+    opacity: 0.85,
+  },
+  socialContainer: {
+    flexDirection: "row",
+    justifyContent: "space-around",
+    gap: 12,
+  },
+  socialButton: {
     flex: 1,
-  },
-  socialName: {
-    fontSize: 16,
-    fontWeight: '600',
-    marginBottom: 2,
-    letterSpacing: 0.1,
-  },
-  socialDesc: {
-    fontSize: 14,
-    marginBottom: 2,
-    opacity: 0.8,
-  },
-  socialSubtitle: {
-    fontSize: 12,
-    opacity: 0.6,
-  },
-  socialArrow: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-
-  // Info Section - Technical details
-  infoSection: {
-    margin: 20,
-    padding: 24,
-    borderRadius: 20,
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
+    paddingVertical: 14,
+    borderRadius: 16,
+    alignItems: "center",
+    justifyContent: "center",
+    elevation: 4,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
+    shadowRadius: 6,
+  },
+  socialLabel: {
+    fontSize: 11,
+    marginTop: 6,
+    letterSpacing: 0.2,
+  },
+  infoCard: {
+    borderRadius: 20,
+    padding: 16,
+    elevation: 2,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.08,
     shadowRadius: 4,
   },
-  infoGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-  },
-  infoItem: {
-    width: '50%',
-    paddingVertical: 8,
+  infoRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingVertical: 12,
   },
   infoLabel: {
-    fontSize: 12,
-    fontWeight: '500',
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-    marginBottom: 4,
-    opacity: 0.7,
+    fontSize: 13,
+    letterSpacing: 0.2,
   },
   infoValue: {
-    fontSize: 16,
-    fontWeight: '500',
-    letterSpacing: 0.1,
+    fontSize: 13,
+    letterSpacing: 0.2,
   },
-
-  // Footer - Clean and minimal
+  divider: {
+    height: 1,
+    marginVertical: 4,
+  },
+  statusBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 12,
+  },
+  statusDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    marginRight: 6,
+  },
+  statusText: {
+    fontSize: 12,
+    letterSpacing: 0.2,
+  },
   footer: {
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 32,
-    gap: 8,
+    marginHorizontal: 20,
+    paddingVertical: 20,
+    paddingHorizontal: 16,
+    borderRadius: 20,
+    alignItems: "center",
+    marginBottom: 20,
   },
   footerText: {
-    fontSize: 15,
-    textAlign: 'center',
-    letterSpacing: 0.1,
-    opacity: 0.8,
+    fontSize: 14,
+    textAlign: "center",
+    letterSpacing: 0.2,
+    marginBottom: 6,
   },
-  footerCopy: {
-    fontSize: 13,
-    textAlign: 'center',
-    opacity: 0.6,
+  footerSubtext: {
+    fontSize: 12,
+    textAlign: "center",
+    letterSpacing: 0.2,
+    opacity: 0.7,
   },
 });
